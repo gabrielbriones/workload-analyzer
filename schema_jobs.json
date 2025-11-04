@@ -1,0 +1,865 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "type": "object",
+  "properties": {
+    "JobRequestId": {
+      "type": "string"
+    },
+    "ParentInstanceID": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ParentInstanceID in UUID format"
+    },
+    "Type": {
+      "type": "string",
+      "enum": [
+        "Instance",
+        "WorkloadJob",
+        "WorkloadJobROI",
+        "BiosValidation",
+        "WorkloadROI",
+        "WorkloadPBT",
+        "WorkloadIWPS",
+        "NovaIWPS",
+        "NovaCoho",
+        "IWPS",
+        "ISIM",
+        "CScripts"
+      ]
+    },
+    "MetricsEnabled": {
+      "type": "boolean",
+      "description": "Enabling/Disabling metrics for the instance"
+    },
+    "HasMetricsData": {
+      "type": "boolean",
+      "description": "Metrics have been enabled at any time"
+    },
+    "Name": {
+      "type": "string",
+      "description": "Instance Name defined by user"
+    },
+    "Description": {
+      "type": "string",
+      "description": "Instance Description defined by user"
+    },
+    "TerminateWarningEmailSent": {
+      "type": "boolean",
+      "description": "Has Terminate Warning Email been sent to the user"
+    },
+    "TerminateWhenWorkloadCompletes": {
+      "type": "boolean",
+      "description": "Terminate Instance when workload completes"
+    },
+    "JobRequestStatus": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "queued",
+        "allocating",
+        "allocated",
+        "booting",
+        "inprogress",
+        "checkpointing",
+        "error",
+        "done",
+        "releasing",
+        "released",
+        "complete"
+      ]
+    },
+    "JobRequestStatusDetails": {
+      "type": "string"
+    },
+    "JobResult": {
+      "type": "string"
+    },
+    "Queue": {
+      "type": "string"
+    },
+    "Workload": {
+      "type": "object",
+      "description": "Workload description",
+      "properties": {
+        "WorkloadID": {
+          "type": "string"
+        },
+        "WorkloadName": {
+          "type": "string"
+        },
+        "WorkloadDescription": {
+          "type": "string"
+        },
+        "WorkloadReadme": {
+          "type": "string"
+        },
+        "PlatformName": {
+          "type": "string"
+        },
+        "WorkloadType": {
+          "type": "string"
+        },
+        "SFRepo": {
+          "type": "string"
+        },
+        "SFDir": {
+          "type": "string"
+        },
+        "SFBranch": {
+          "type": "string"
+        },
+        "WorkloadVersion": {
+          "type": "string"
+        },
+        "SFTest": {
+          "type": "string"
+        },
+        "WorkloadStatus": {
+          "type": "string"
+        },
+        "AccessGroup": {
+          "type": "string"
+        },
+        "Info": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "AdditionalInfo": {
+              "type": "object",
+              "properties": {
+                "isim": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "TestCase": {
+      "type": "object",
+      "description": "Testcase to be run on Workload deployed to Target Platform",
+      "properties": {
+        "WorkloadID": {
+          "type": "string"
+        },
+        "TestCaseName": {
+          "type": "string"
+        },
+        "TestCaseDescription": {
+          "type": "string"
+        },
+        "Cluster": {
+          "type": "array",
+          "description": "Target Cluster with label",
+          "items": {
+            "label": {
+              "type": "object"
+            }
+          }
+        },
+        "DockerImages": {
+          "type": "array",
+          "description": "List of images",
+          "items": {
+            "type": "string"
+          }
+        },
+        "SUT": {
+          "type": "string"
+        },
+        "EventTraceParams": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "Requirements": {
+          "type": "object",
+          "description": "Testcase requirements",
+          "properties": {
+            "cpu": {
+              "type": "number"
+            },
+            "maxvmsize": {
+              "type": "number"
+            }
+          }
+        },
+        "Info": {
+          "type": "object",
+          "description": "Info object",
+          "properties": {
+            "roi": {
+              "type": "object",
+              "properties": {
+                "roi_start": {
+                  "type": "string"
+                },
+                "roi_end": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            },
+            "InstrumentedWorkload": {
+              "type": "boolean"
+            },
+            "ThresholdMetric": {
+              "type": "string",
+              "enum": [
+                "level1",
+                "level2",
+                "level3"
+              ]
+            }
+          },
+          "required": [
+            "InstrumentedWorkload"
+          ],
+          "if": {
+            "properties": {
+              "InstrumentedWorkload": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "roi"
+              ]
+            }
+          },
+          "else": {
+            "properties": {
+              "roi": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "TargetPlatform": {
+      "type": "object",
+      "description": "Target Platform",
+      "properties": {
+        "PlatformID": {
+          "type": "string"
+        },
+        "PlatformType": {
+          "type": "string"
+        },
+        "PlatformName": {
+          "type": "string"
+        },
+        "PlatformMemorySize": {
+          "type": "number"
+        },
+        "SimicsPlatformRelease": {
+          "type": "string"
+        },
+        "SimicsPlatformVersion": {
+          "type": "string"
+        },
+        "SimicsPlatformName": {
+          "type": "string"
+        },
+        "SimicsPodMemorySize": {
+          "type": "string"
+        },
+        "SimicsPodCpuCount": {
+          "type": "number"
+        },
+        "SimicsPackages": {
+          "type": "object"
+        },
+        "Released": {
+          "type": "boolean"
+        },
+        "BootProfile": {
+          "type": "object",
+          "properties": {
+            "BootProfileID": {
+              "type": "string"
+            },
+            "Name": {
+              "type": "string"
+            },
+            "Description": {
+              "type": "string"
+            },
+            "TenantID": {
+              "type": "string"
+            },
+            "BootTo": {
+              "type": "string"
+            },
+            "BootToKeyPress": {
+              "type": "string"
+            },
+            "Metrics": {
+              "type": "boolean"
+            }
+          }
+        },
+        "Description": {
+          "type": "string"
+        },
+        "Features": {
+          "type": "object",
+          "description": "Supported features",
+          "properties": {
+            "bios": {
+              "type": "boolean"
+            },
+            "simicsfs-logs": {
+              "type": "boolean"
+            },
+            "iwps": {
+                "type": "boolean"
+            },
+            "iwps_enabled": {
+                "type": "boolean"
+            },
+            "nova_iwps": {
+                "type": "boolean"
+            },
+            "traces": {
+                "type": "boolean"
+            },
+            "fuses": {
+              "type": "boolean"
+            },
+            "extra_drives": {
+              "type": "array",
+              "description": "Extra Drives",
+              "items": {
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "Defaults": {
+          "type": "object",
+          "description": "Defaults for OS/BIOS/usb images"
+        },
+        "PodContainers": {
+          "type": "object",
+          "description": "Container versions"
+        },
+        "UserID": {
+          "type": "string"
+        },
+        "SimicsParameters": {
+          "type": "object"
+        },
+        "SimicsParameterOptions": {
+          "description": "Ignored"
+        },
+        "SimicsCheckpointDescription": {
+          "type": "string"
+        },
+        "SimicsCheckpoint": {
+          "type": "string"
+        },
+        "SimicsCheckpointDate": {
+          "type": "string"
+        },
+        "Trace": {
+          "$ref": "#/definitions/TraceWithDefaultThreads"
+        },
+        "Traces": {
+          "type": "array",
+          "description": "Array of Trace objects",
+          "items": {
+            "$ref": "#/definitions/TraceWrapper"
+          }
+        },
+        "Fuses": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 44,
+          "items": {
+            "type": "object"
+          }
+        },
+        "IWPSParameterOptions" :{
+          "type": "array",
+          "description": "IWPS Parameters details",
+          "items": {
+              "type": "object"
+          }
+        },
+        "ISIMParameterOptions" :{
+          "type": "array",
+          "description": "ISIM Parameters details",
+          "items": {
+            "type": "object"
+          }
+        },
+        "CohoParameterOptions" :{
+          "type": "array",
+          "description": "Coho Parameters details",
+          "items": {
+              "type": "object"
+          }
+        },
+        "AllowedTenants": {
+            "type": "array",
+            "description": "Array of Allowed Platform Names allowed for this tenant",
+            "items": {
+                "type": "string"
+            }
+        },
+        "Weight": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TargetCluster": {
+      "type": "array",
+      "description": "Target Cluster with label",
+      "items": {
+        "label": {
+          "type": "object"
+        }
+      }
+    },
+    "Allocation": {
+      "type": "object",
+      "description": "Provides hardware allocation details",
+      "properties": {
+        "AllocationType": {
+          "type": "string"
+        },
+        "GatewayHost": {
+          "type": "string"
+        },
+        "GrafanaLink": {
+          "type": "string"
+        },
+        "SshHostname": {
+          "type": "string"
+        },
+        "WebSocketSshUrl": {
+          "type": "string"
+        },
+        "WebSocketSerialConsoleUrl": {
+          "type": "string"
+        },
+        "AWSSimicsPodName": {
+          "type": "string"
+        },
+        "AWSSimicsNamespace": {
+          "type": "string"
+        }
+      }
+    },
+    "Execution": {
+      "type": "object",
+      "description": "Provides execution details",
+      "properties": {
+        "ExecutionType": {
+          "type": "string"
+        },
+        "JenkinsJobID": {
+          "type": "string"
+        },
+        "JenkinsJobUrl": {
+          "type": "string"
+        },
+        "ArtifactoryLogLink": {
+          "type": "string"
+        },
+        "CumulusDashboardLink": {
+          "type": "string"
+        },
+        "CumulusRunID": {
+          "type": "string"
+        }
+      }
+    },
+    "Cumulus": {
+      "type": "object",
+      "description": "Cumulus info",
+      "properties": {
+        "DashboardTester": {
+          "type": "string"
+        },
+        "Tags": {
+          "type": "string"
+        }
+      }
+    },
+    "ExecutionParameters": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "NovaParameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Nova parameters configuration.",
+          "properties": {
+            "config.yaml": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Nova Configuration fields",
+              "properties": {
+                "warmup_length": {
+                  "type": "number"
+                },
+                "simulation_skip": {
+                  "type": "number"
+                },
+                "clear_stats_after": {
+                  "type": "number"
+                },
+                "trace_length": {
+                  "type": "number"
+                }
+              }
+            },
+            "workload.yaml": {
+              "type": "object",
+              "description": "Nova Workload Configuration fields",
+              "properties": {
+                "checkpoint_path": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "IWPS": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "IWPS parameters configuration.",
+          "properties": {
+            "config.yaml": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "IWPS Configuration fields",
+              "properties": {
+                "warmup_length": {
+                  "type": "number",
+                  "enum": [
+                    50000000
+                  ]
+                },
+                "simulation_skip": {
+                  "type": "number",
+                  "enum": [
+                    1000,
+                    2000,
+                    3000,
+                    4000
+                  ]
+                },
+                "clear_stats_after": {
+                  "type": "number",
+                  "enum": [
+                    2000,
+                    4000,
+                    8000,
+                    16000
+                  ],
+                  "minimum": 2000,
+                  "maximum": 16000
+                },
+                "trace_length": {
+                  "type": "number",
+                  "enum": [
+                    1000000,
+                    2000000
+                  ]
+                },
+                "step_count": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 30000
+                }
+              }
+            },
+            "workload.yaml": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "IWPS Workload Configuration fields",
+              "properties": {
+                "perf_model/core/frequency": {
+                  "type": "number"
+                },
+                "perf_model/l1_icache/cache_size": {
+                  "type": "number",
+                  "description": "Cache size in KB",
+                  "enum": [
+                    48,
+                    64,
+                    128
+                  ]
+                },
+                "perf_model/l1_dcache/cache_size": {
+                  "type": "number",
+                  "description": "Cache size in KB",
+                  "enum": [
+                    64,
+                    128
+                  ]
+                }
+              }
+            },
+            "simics-service-iwps.cfg": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Simics service IWPS Configuration fields",
+              "properties": {
+                "perf_model/core/frequency": {
+                  "type": "number"
+                },
+                "step-by-icount": {
+                  "type": "number",
+                  "description": "The number of instructions to simulate before stopping IWPS.",
+                  "minimum": 1000000,
+                  "maximum": 1000000000000
+                }
+              }
+            }
+          }
+        },
+        "ISIM": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "ISIM parameters configuration.",
+          "properties": {
+            "simics-service-iwps.cfg": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Simics service IWPS Configuration fields for ISIM",
+              "properties": {
+                "perf_model/core/frequency": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        },
+        "NovaIWPS": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "NovaIWPS parameters configuration.",
+          "properties": {
+            "config.yaml": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "NovaIWPS Configuration fields",
+              "properties": {
+                "warmup_length": {
+                  "type": "number",
+                  "enum": [
+                    50000000
+                  ]
+                },
+                "simulation_skip": {
+                  "type": "number",
+                  "enum": [
+                    1000,
+                    2000,
+                    3000,
+                    4000
+                  ]
+                },
+                "clear_stats_after": {
+                  "type": "number",
+                  "enum": [
+                    2000,
+                    4000,
+                    8000,
+                    16000
+                  ],
+                  "minimum": 2000,
+                  "maximum": 16000
+                },
+                "trace_length": {
+                  "type": "number",
+                  "enum": [
+                    1000000,
+                    2000000
+                  ]
+                }
+              }
+            },
+            "workload.yaml": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "IWPS Workload Configuration fields",
+              "properties": {
+                "perf_model/core/frequency": {
+                  "type": "number"
+                },
+                "perf_model/l1_icache/cache_size": {
+                  "type": "number",
+                  "description": "Cache size in KB",
+                  "enum": [
+                    48,
+                    64,
+                    128
+                  ]
+                },
+                "perf_model/l1_dcache/cache_size": {
+                  "type": "number",
+                  "description": "Cache size in KB",
+                  "enum": [
+                    64,
+                    128
+                  ]
+                },
+                "step_count": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 30000
+                }
+              }
+            }
+          }
+        },
+        "NovaCoho": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Coho execution parameters configuration.",
+            "properties": {
+                "simics-service-novacoho.cfg": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Simics service Coho Configuration fields",
+                    "host_fixed_freq": {
+                        "type": "number"
+                    }
+                }
+            }
+        }
+      },
+      "description": "Execution parameters for PBT, IWPS, Nova, Coho type of Workloads"
+    },
+    "Authentication": {
+      "type": "object",
+      "description": "User public key info",
+      "properties": {
+        "UserPubKey": {
+          "type": "string"
+        }
+      }
+    },
+    "TenantID": {
+      "type": "string",
+      "description": "Tenant Identifier"
+    },
+    "TerminateOn": {
+      "anyof": [
+        {
+          "type": "string",
+          "format": "data-time"
+        },
+        {
+          "type": "string",
+          "maxLength": 0
+        }
+      ],
+      "description": "End of life timestamp details for Instance"
+    },
+    "SubState": {
+      "type": "string"
+    },
+    "SubStates": {
+      "type": "object",
+      "description": "Sub States",
+      "additionalProperties": true,
+      "patternProperties": {
+        "^[a-zA-Z]+$": {
+          "type": "object",
+          "properties": {
+            "TaskID": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "TaskStatus": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "pass",
+                "fail"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "definitions": {
+    "Trace": {
+      "type": "object",
+      "description": "Trace object",
+      "properties": {
+        "TraceType": {
+          "type": "string",
+          "enum": ["pinball","littrace","dynamorio", "coho_lit"]
+        },
+        "TraceName": {
+          "type": "string"
+        },
+        "BaseName": {
+          "type": "string"
+        },
+        "InsCount": {
+          "type": "number"
+        },
+        "Description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "mtime": {
+          "type": "string"
+        },
+        "UserID": {
+          "type": "string"
+        },
+        "NumberOfThreads": {
+          "type": "number"
+        },
+        "CohoTlistOptions": {
+            "type": "object"
+        }
+      },
+      "required": ["TraceType"]
+    },
+
+    "TraceWithDefaultThreads": {
+      "allOf": [
+        { "$ref": "#/definitions/Trace" },
+        {
+          "properties": {
+            "NumberOfThreads": {
+              "type": "number",
+              "default": 1
+            }
+          }
+        }
+      ]
+    },
+
+    "TraceWrapper": {
+      "type": "object",
+      "properties": {
+        "Trace": { "$ref": "#/definitions/Trace" }
+      },
+      "required": ["Trace"]
+    }
+  }
+}
