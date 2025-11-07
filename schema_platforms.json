@@ -1,0 +1,143 @@
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "type": "object",
+    "properties": {
+        "PlatformID": {
+            "type": "string"
+        },
+        "PlatformType":{
+            "type": "string"
+        },
+        "PlatformName":{
+            "type": "string"
+        },
+        "PlatformMemorySize":{
+            "type": "number"
+        },
+        "AllowedTenants":{
+            "type": "array"
+        },
+        "SimicsPlatformRelease":{
+            "type": "string"
+        },
+        "SimicsPlatformVersion":{
+            "type": "string"
+        },
+        "SimicsPlatformName":{
+            "type": "string"
+        },
+        "SimicsPodCpuCount":{
+            "type": "number"
+        },
+        "SimicsPodMemorySize":{
+            "type": "string"
+        },
+        "Description":{
+            "type":"string"
+        },
+        "Weight":{
+            "type": "number"
+        },
+        "Features":{
+            "type": "object",
+            "description": "Supported features",
+            "properties": {
+                "bios": {
+                    "type": "boolean"
+                },
+                "simicsfs-logs": {
+                    "type": "boolean"
+                },
+                "iwps": {
+                    "type": "boolean"
+                },
+                "iwps_enabled": {
+                    "type": "boolean"
+                },
+                "nova_iwps": {
+                    "type": "boolean"
+                },
+                "traces": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "Defaults":{
+            "type": "object",
+            "description": "Defaults for OS/BIOS/usb images"
+        },
+        "PodContainers":{
+            "type": "object",
+            "description": "Container versions"
+        },
+        "SimicsParameterOptions":{
+            "type": "array",
+            "description": "Schema for Simics Parameters",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "options": {
+                        "type": "array"
+                    }
+                }
+             }
+        },
+        "Released":{
+            "type": "boolean"
+        },
+        "SimicsParameters":{
+            "type": "object",
+            "description": "Simics Parameters details",
+            "properties": {
+                "n_cores":{
+                    "type": "number"
+                },
+                "num_cpus":{
+                    "type": "number"
+                },
+                "n_threads":{
+                    "type": "number"
+                },
+                "memory_per_dimm":{
+                    "type": "number"
+                },
+                "uncore_revision":{
+                    "type": "string"
+                },
+                "dimms_per_socket":{
+                    "type": "number"
+                }
+            }
+        },
+        "IWPSParameterOptions":{
+            "type": "array",
+            "description": "IWPS Parameters details",
+            "items": {
+                "type": "object"
+            }
+        },
+        "ISIMParameterOptions":{
+            "type": "array",
+            "description": "ISIM Parameters details",
+            "items": {
+                "type": "object"
+            }
+        },
+        "CohoParameterOptions":{
+            "type": "array",
+            "description": "Coho Parameters details",
+            "items": {
+                "type": "object"
+            }
+        }
+    }
+}

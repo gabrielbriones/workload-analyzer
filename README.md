@@ -3,95 +3,141 @@
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)](https://fastapi.tiangolo.com)
 
-An intelligent workload analysis platform that integrates with Intel Simulation Service (ISS) to provide AI-powered insights for workload optimization, compilation improvements, and simulation configuration tuning.
+An intelligent workload analysis platform that integrates with Intel Simulation Service (ISS) to provide AI-powered performance insights, hotspot identification, vectorization analysis, and optimization recommendations for multiple Intel platform simulations.
 
 ## 🚀 Overview
 
-The Workload Analyzer serves as a bridge between the Intel Simulation Service (ISS) REST API and an AI assistant, enabling users to:
+The Workload Analyzer serves as an intelligent interface to Intel Simulation Service (ISS), enabling performance engineers to:
 
-- **Query Workload Data**: Fetch execution jobs and performance metrics from ISS
-- **Analyze Results**: Get AI-powered insights on workload performance and optimization opportunities
-- **Interactive Chat**: Ask natural language questions about workloads and receive actionable recommendations
-- **Performance Optimization**: Receive suggestions for improving code, compilation processes, and simulation configurations
+- **Hotspot Analysis**: Identify top performance bottlenecks in functions and basic blocks with AI-powered insights
+- **Vectorization Optimization**: Analyze AVX2/AVX512 usage patterns and suggest upgrade paths for supported platforms
+- **Memory Performance**: Detect cache misses, memory bottlenecks, and prefetch optimization opportunities
+- **Compiler Tuning**: Get AI-recommended compiler flags based on workload characteristics and simulation profiles
+- **Automated Insights**: Ask natural language questions about simulation data and receive actionable optimization strategies
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│   User/Client   │───▶│  FastAPI Server  │───▶│ Intel Simulation    │
-│                 │    │  (This Project)  │    │ Service (ISS) API   │
-└─────────────────┘    └──────────────────┘    └─────────────────────┘
-                                │
-                                ▼
-                       ┌──────────────────┐
-                       │   AI Assistant   │
-                       │  (Auto Bedrock)  │
-                       └──────────────────┘
+                                        ┌─────────────────────┐
+                               ┌───────▶│ Intel Simulation    │
+                               │        │ Service (ISS) API   │
+                               │        └─────────────────────┘
+┌─────────────────┐    ┌──────────────────┐
+│   User/Client   │───▶│  FastAPI Server  │        ┌─────────────────────┐
+│                 │    │(API wrapper &    │───────▶│ ISS File Service    │
+└─────────────────┘    │ chat interface)  │        │ (Artifacts & Logs)  │
+                       └──────────────────┘        └─────────────────────┘
+                               │
+                               │        ┌──────────────────┐
+                               ├───────▶│ OAuth2 Server +  │
+                               │        │ AWS Secrets Mgr  │
+                               │        └──────────────────┘
+                               │
+                               │        ┌─────────────────────┐
+                               └───────▶│ AWS Bedrock         │
+                                        │ (AI Models)         │
+                                        └─────────────────────┘
 ```
 
 ## 📋 Features
 
-### Workload Analysis
-- **Job Monitoring**: Track execution status across multiple job types (Instance, WorkloadJob, IWPS, ISIM, etc.)
-- **Performance Metrics**: Analyze CPU frequency, cache configurations, and execution parameters
-- **Platform Support**: Support for multiple target platforms and simulation environments
-- **Trace Analysis**: Process different trace types (pinball, littrace, dynamorio, coho_lit)
+### Core Functionality
+- **Job Management**: List, filter, and retrieve detailed information about ISS simulation jobs
+- **File Operations**: Access simulation output files, logs, and artifacts with secure download capabilities
+- **Authentication**: OAuth2 client credentials flow with AWS Secrets Manager integration
+- **Corporate Proxy**: Full support for corporate network environments with proxy configuration
+- **Error Handling**: Comprehensive error handling with proper HTTP status codes and logging
 
-### AI-Powered Insights
-- **Natural Language Interface**: Ask questions about workload performance in plain English
-- **Real-time Chat**: WebSocket-based conversational interface with typing indicators
-- **Automatic Tool Generation**: Your API endpoints become AI-callable tools automatically
-- **Multi-Model Support**: Choose from Claude 4.5, Claude 3.5, OpenAI GPT OSS, Titan, Llama, and more
-- **Contextual Analysis**: AI maintains conversation history for deeper workload discussions
-- **Smart Recommendations**: Get specific suggestions for improving workload efficiency based on actual data
-- **Configuration Tuning**: Receive guidance on optimal simulation parameters with reasoning
-- **Error Diagnosis**: AI can analyze failed jobs and suggest remediation steps
+### Job Monitoring
+- **Job Types**: Support for Instance, WorkloadJob, IWPS, ISIM, and other ISS job types
+- **Status Tracking**: Real-time job status monitoring with execution details
+- **Metadata Access**: Job descriptions, platform information, execution parameters, and timestamps
+- **Filtering**: Query jobs by status, type, platform, owner, and other criteria
 
-### Integration Capabilities
-- **RESTful API**: Clean, documented endpoints for all workload operations
-- **OpenAPI Auto-Discovery**: AI automatically discovers and can call your API endpoints
-- **Real-time WebSocket Chat**: Persistent chat sessions with conversation memory
-- **Built-in Web UI**: Professional chat interface - no frontend development needed
-- **Security Controls**: Configurable endpoint filtering and authentication
-- **Session Management**: Support for concurrent users with session isolation
-- **Extensible Architecture**: Easy to add new analysis modules and data sources
+### File Management
+- **File Listing**: List all output files and artifacts from completed simulation jobs
+- **Secure Downloads**: Stream file downloads with proper authentication and error handling
+- **Multiple Formats**: Support for simulation profiles, logs, traces, and performance data
+- **Path Management**: Correct ISS file service path handling for job artifacts
 
-## 🤖 AI Assistant Capabilities
+### Integration Capabilities  
+- **RESTful API**: Clean, documented endpoints following OpenAPI standards
+- **Pydantic V2**: Modern data validation and serialization with comprehensive error messages
+- **FastAPI Framework**: Automatic API documentation, request validation, and async support
+- **AI Integration**: AWS Bedrock integration for intelligent workload analysis and optimization recommendations
+- **Modular Architecture**: Clean separation of concerns with services, models, and API layers
 
-The integrated AI assistant powered by **auto-bedrock-chat-fastapi** provides:
+## 🔧 Core API Endpoints
 
-### **Intelligent Workload Analysis**
-- **"Show me all IWPS jobs running on SPR platforms"** - AI queries `/v1/jobs` and filters by platform and type
-- **"What platforms support ISIM workloads?"** - AI calls `/v1/platforms` and analyzes platform capabilities
-- **"Get the schema for running Coho jobs on Intel-SPR-8380"** - AI fetches `/v1/jobs/coho/Intel-SPR-8380/schema`
-- **"Show me the output files for job a2290337-a3d4-40db-904d-79222997688f"** - AI lists files from `/fs/files/{job_id}/iwps/artifacts/out`
-- **"Analyze the performance profile from job a1234567-b2c3-4d5e-6f78-90abcdef1234"** - AI downloads and analyzes simulation results
-- **"Compare memory usage between jobs running on different platforms"** - AI retrieves and compares memory profiles
+The application provides a focused set of job management and file access endpoints:
 
-### **Advanced Model Options**
-| Model | Use Case | Performance |
-|-------|----------|-------------|
-| **Claude 4.5 Sonnet** | Complex analysis, deep reasoning | 🚀 **Best for Intel workloads** |
-| **Claude 3.5 Haiku** | Quick queries, cost-effective | ⚡ **Fast responses** |
-| **OpenAI GPT OSS** | Open-source transparency | 🌐 **Enterprise-friendly** |
-| **Llama 3.1 70B** | On-premises options | 🔒 **Data sovereignty** |
+### **Recent API Improvements** ✨
+- **ISS API Compliance**: Jobs endpoint now returns native ISS API response format
+- **Enhanced Job Types**: Added support for NovaCoho and expanded JobType validation
+- **Improved Status Filtering**: Complete ISS status enum with 12 status values
+- **Continuation Token Pagination**: Efficient ISS-native pagination replacing offset-based approach
+- **Comma-Separated Filtering**: Support for multiple job types in single request
+- **Enhanced Validation**: Strict validation of job types and status values with helpful error messages
 
-### **Automatic API Integration**
-The AI assistant automatically discovers and can interact with all your workload analyzer endpoints:
+### **Job Management**
+- **List Jobs**: `GET /api/v1/jobs` - Query all jobs with filtering by status, type, platform, and owner
+  - **Status Filter**: Support for 12 ISS status values (requested, queued, allocating, allocated, booting, inprogress, checkpointing, done, error, releasing, released, complete)
+  - **Job Type Filter**: Comma-separated job types (e.g., `job_type=IWPS,ISIM,WorkloadJobROI`)
+  - **Pagination**: Uses ISS API continuation tokens for efficient paging
+- **Job Details**: `GET /api/v1/jobs/{job_id}` - Get comprehensive job information including related data
+- **Job Schema**: `GET /api/v1/jobs/schema` - Retrieve job definition schema for validation
 
-#### **Current Read-Only Operations (v1.0)**
-- **Platform Management**: Query platforms (`GET /v1/platforms`), get platform details (`GET /v1/platforms/platform/{PlatformID}`)
-- **Job Querying**: List all jobs (`GET /v1/jobs`), get job details (`GET /v1/jobs/job/{JobRequestID}`)
-- **Instance Monitoring**: List instances (`GET /v1/instances`), get instance details (`GET /v1/instances/instance/{InstanceID}`)
-- **Schema Discovery**: Get IWPS schemas (`GET /v1/jobs/iwps/{Platform}/schema`), ISIM schemas (`GET /v1/jobs/isim/{Platform}/schema`), Coho schemas (`GET /v1/jobs/coho/{Platform}/schema`)
-- **File Access**: List job output files (`GET /fs/files/{job_id}/iwps/artifacts/out`), download simulation results and logs
-- **Performance Analysis**: Fetch metrics, generate reports, compare configurations
-- **Platform Intelligence**: Compare platform capabilities, recommend optimal platforms for workloads
+### **File Operations**  
+- **List Files**: `GET /api/v1/jobs/{job_id}/files` - List all output files and artifacts for a job
+- **Download Files**: `GET /api/v1/jobs/{job_id}/files/{filename}` - Download specific job output files
+- **Authentication**: All endpoints use OAuth2 Bearer token authentication with ISS credentials
 
-#### **Future Roadmap (Read/Write Operations)**
-- **Job Management**: Create, update, and delete simulation jobs
-- **Instance Control**: Terminate instances, update metrics settings
-- **Platform Administration**: Create and manage platforms (admin functions)
+### **AI-Powered Analysis** 🤖
+- **Chat Interface**: `/bedrock-chat` - WebSocket endpoint for natural language workload analysis
+- **Intelligent Insights**: AI-powered hotspot identification, vectorization analysis, and optimization recommendations
+- **AWS Bedrock**: Integration with Claude models for performance analysis and compiler optimization guidance
+
+### **Authentication Flow**
+| Step | Description | Implementation |
+|------|-------------|----------------|
+| **Credentials** | AWS Secrets Manager | ISS client credentials retrieved securely |
+| **Token Exchange** | OAuth2 Client Credentials | HTTP Basic Auth with client_id/client_secret |
+| **API Access** | Bearer Token | All ISS API requests use `Authorization: Bearer {token}` |
+| **Proxy Support** | Corporate Networks | Full proxy configuration for enterprise environments |
+
+### **Response Format**
+Job listing endpoints now return ISS API response format with continuation token pagination:
+
+```json
+{
+  "jobs": [...],                    // List of job objects from ISS API
+  "count": 150,                     // Total count from ISS API
+  "continuation_token": "2025-11-06T07:24:51.298Z..."  // Token for next page
+}
+```
+
+**Legacy Response Format** (for platforms and instances APIs):
+```json
+{
+  "jobs": [...],           // List of job objects
+  "meta": {                // Pagination metadata
+    "total": 150,
+    "page": 1,
+    "page_size": 50,
+    "total_pages": 3,
+    "has_next": true,
+    "has_previous": false,
+    "continuation_token": "..."  // ISS continuation token if available
+  },
+  "filters_applied": {...}, // Applied query filters
+  "sort_by": "created_at",
+  "sort_order": "desc"
+}
+```
+
+#### **Job ID Format**
+- **ISS Jobs**: UUIDs like `caef4de5-00e2-4483-b23c-b4bd3bbb5876`
+- **File Paths**: Use job ID directly in file service paths: `/fs/files/{job_id}/iwps/artifacts/out`
 
 ## 📊 Supported Job Types
 
@@ -104,8 +150,28 @@ The system supports analysis for various Intel simulation job types:
 | `WorkloadJobROI` | Region of Interest workloads | Focused performance studies |
 | `IWPS` | Intel Workload Performance Simulator | Detailed performance modeling |
 | `ISIM` | Intel Simulator | Architecture exploration |
-| `NovaIWPS` | Nova-based IWPS execution | Advanced performance analysis |
-| `BiosValidation` | BIOS validation runs | Platform validation |
+| `Coho` | Coho simulation workloads | Platform validation and testing |
+| `NovaCoho` | Nova-based Coho execution | Advanced Coho workload analysis |
+| `Custom` | Custom simulation configurations | User-defined workload scenarios |
+
+### Job Status Values
+
+The API supports filtering by the following job status values:
+
+| Status | Description |
+|--------|-------------|
+| `requested` | Job has been submitted but not yet queued |
+| `queued` | Job is waiting in the execution queue |
+| `allocating` | Resources are being allocated for the job |
+| `allocated` | Resources have been allocated |
+| `booting` | System is booting/initializing |
+| `inprogress` | Job is currently executing |
+| `checkpointing` | Job is being checkpointed |
+| `done` | Job execution completed successfully |
+| `error` | Job encountered an error during execution |
+| `releasing` | Resources are being released |
+| `released` | Resources have been released |
+| `complete` | Job fully completed with all cleanup done |
 
 ## 🛠️ Data Schema
 
@@ -123,7 +189,7 @@ The project uses a comprehensive JSON schema (`schema_jobs.json`) that defines:
 - Python 3.9 or higher
 - Access to Intel Simulation Service (ISS) API
 - AWS credentials for ISS authentication (managed via AWS Secrets Manager)
-- AWS credentials for Bedrock AI integration (may be different account)
+- Corporate proxy settings (if running in enterprise environment)
 - Poetry or pip for dependency management
 
 ### Installation
@@ -157,324 +223,552 @@ The project uses a comprehensive JSON schema (`schema_jobs.json`) that defines:
    Or set environment variables directly:
    ```bash
    # ISS API configuration
-   export ISS_API_URL="your-iss-api-endpoint"
-   export AUTH_DOMAIN="your-auth-domain"
-   export CLIENT_SECRET_NAME="your-iss-secret-name"
+   export ISS_API_URL="https://gw-extval-test.workloadmgr.intel.com"
+   export AUTH_DOMAIN="https://cognito-idp.us-west-2.amazonaws.com/your-pool/oauth2/token"
+   export CLIENT_SECRET_NAME="test/cognito/client_creds/services-backend"
+   export TENANT_ID="your-tenant-id"
    
-   # AWS credentials for ISS authentication (may be separate account)
-   export AWS_ACCESS_KEY_ID_ISS="your-iss-aws-key"
-   export AWS_SECRET_ACCESS_KEY_ISS="your-iss-aws-secret"
-   export AWS_REGION_ISS="your-iss-aws-region"
+   # AWS credentials for ISS authentication
+   export AWS_ACCESS_KEY_ID="your-aws-key"
+   export AWS_SECRET_ACCESS_KEY="your-aws-secret"
+   export AWS_REGION="us-west-2"
    
-   # AWS credentials for Bedrock AI integration
-   export AWS_ACCESS_KEY_ID="your-bedrock-aws-key"
-   export AWS_SECRET_ACCESS_KEY="your-bedrock-aws-secret"
-   export AWS_REGION="us-east-1"
+   # Corporate proxy (if required)
+   export HTTPS_PROXY="http://proxy-chain.intel.com:912"
+   export HTTP_PROXY="http://proxy-chain.intel.com:912"
    
-   # AI Model Configuration (optional)
-   export BEDROCK_MODEL_ID="anthropic.claude-3-5-sonnet-20241022-v2:0"
-   export BEDROCK_TEMPERATURE="0.7"
-   export BEDROCK_MAX_TOKENS="4096"
+   # Timeout settings
+   export ISS_TIMEOUT_SECONDS="300"
+   export FILE_SERVICE_TIMEOUT_SECONDS="600"
    ```
 
-4. **Enable Bedrock Model Access**:
-   - Go to AWS Console → Amazon Bedrock
-   - Navigate to "Model access" in the left sidebar
-   - Request access to Claude, Titan, Llama, or other desired models
-   - Wait for approval (usually instant)
-
-5. **Run the application**:
+4. **Run the application**:
    ```bash
    # Using Poetry
-   poetry run uvicorn main:app --reload
+   poetry run uvicorn workload_analyzer.main:app --reload
    
    # Or using pip
-   uvicorn main:app --reload
+   uvicorn workload_analyzer.main:app --reload
    ```
 
-6. **Access the interfaces**:
-   - **🤖 AI Chat Interface**: `http://localhost:8000/bedrock-chat/ui`
+5. **Access the interfaces**:
    - **📚 API Documentation**: `http://localhost:8000/docs`
-   - **🔗 WebSocket Chat**: `ws://localhost:8000/bedrock-chat/ws`
-   - **📊 API Health Check**: `http://localhost:8000/health`
+   - **� API Health Check**: `http://localhost:8000/health`
+   - **� Jobs API**: `http://localhost:8000/api/v1/jobs`
 
 ## 📖 Usage Examples
 
-### 🤖 AI Chat Interface Examples
+### 🤖 AI-Powered Performance Analysis
 
-#### **Platform and Job Discovery**
+#### **Hotspot Identification**
 ```
-You: "Show me all available platforms that support IWPS workloads"
+User: "Identify the top three hottest functions or basic blocks in the latest EMR simulation, including instruction counts and cycle percentages."
 
-AI: I'll query the available platforms and check their IWPS support.
+AI: I'll analyze the simulation profiles to identify performance hotspots for you.
 
-[AI calls GET /v1/platforms]
-[AI calls GET /v1/jobs/iwps/{platform}/schema for each platform]
+[AI downloads sim.funcprofile and sim.bbprofile from latest EMR job]
+[AI processes performance data and calculates hotspot metrics]
 
-Found 5 platforms supporting IWPS:
-- Intel-SPR-8380: SPR-based, 64GB RAM, supports advanced tracing
-- Intel-ICL-1165G7: Ice Lake, 32GB RAM, optimized for mobile workloads  
-- Intel-ADL-12700K: Alder Lake, 64GB RAM, hybrid architecture support
-- Intel-RPL-13700K: Raptor Lake, 128GB RAM, latest generation features
-- Intel-MTL-Ultra7: Meteor Lake, 32GB RAM, AI acceleration support
+🔥 **Top 3 Performance Hotspots:**
 
-Would you like me to get the detailed schema for any specific platform?
-```
+1. **Function: matrix_multiply_avx512 (0x55f5b0cda53d)**
+   - Instructions: 2.8B (34% of total)
+   - Cycles: 1.2B (28% of execution time)
+   - CPI: 0.43 (excellent vectorization)
 
-#### **Job Status Monitoring**
-```
-You: "What's the status of job a2290337-a3d4-40db-904d-79222997688f and what files are available?"
+2. **Basic Block: inner_loop_bb_0x401520**  
+   - Instructions: 890M (11% of total)
+   - Cycles: 1.8B (42% of execution time)
+   - CPI: 2.02 (memory bound - cache misses)
 
-AI: Let me check the details for that job and list available output files.
+3. **Function: data_transpose (0x55f5b0cd8a90)**
+   - Instructions: 560M (7% of total)
+   - Cycles: 450M (10% of execution time) 
+   - CPI: 0.80 (moderate vectorization efficiency)
 
-[AI calls GET /v1/jobs/job/a2290337-a3d4-40db-904d-79222997688f]
-[AI calls GET /fs/files/a2290337-a3d4-40db-904d-79222997688f/iwps/artifacts/out]
-
-Job Details:
-- Job ID: a2290337-a3d4-40db-904d-79222997688f
-- Status: complete
-- Type: IWPS  
-- Platform: Intel-SPR-8380
-- Completed: 45 minutes ago
-- Duration: 2 hours 18 minutes
-
-Available Output Files:
-✓ sim.out - Main simulation output log
-✓ sim.summary.profile - Performance summary  
-✓ cpi-stack.png - CPI stack visualization
-✓ sim.memoryprofile - Memory access patterns
-✓ sim.branchprofile - Branch prediction analysis
-✓ sim.funcprofile - Function-level profiling
-✓ sim.threads.profile - Multi-threading analysis
-
-Would you like me to analyze any specific output file or generate a performance summary?
+💡 **Optimization Priority:** Focus on inner_loop_bb_0x401520 - high cycle count with poor CPI suggests memory optimization opportunities.
 ```
 
-#### **File Analysis**
+#### **Vectorization Coverage Analysis**
 ```
-You: "Show me the contents of the simulation summary for job a2290337-a3d4-40db-904d-79222997688f"
+User: "Detect which functions in my code are vectorized using AVX512 instructions (zmm) and which are still using AVX2 (ymm). Provide function names and instruction samples."
 
-AI: I'll retrieve the simulation summary file for you.
+AI: I'll analyze the instruction profiles to identify vectorization patterns.
 
-[AI calls GET /fs/files/a2290337-a3d4-40db-904d-79222997688f/iwps/artifacts/out/sim.summary.profile]
+[AI downloads sim.insprofile and processes instruction mix data]
 
-Simulation Summary:
-- Total Instructions: 1,234,567,890
-- Cycles: 987,654,321
-- IPC: 1.25
-- Cache Miss Rate (L1): 3.2%
-- Cache Miss Rate (L2): 0.8%  
-- Branch Prediction Accuracy: 94.6%
-- Memory Bandwidth Utilization: 67%
+📊 **Vectorization Analysis Results:**
 
-Performance Insights:
-🔍 Low IPC suggests potential optimization opportunities
-🔍 L1 cache miss rate is within normal range
-⚠️  Memory bandwidth could be better utilized
+**✅ AVX512 Optimized Functions (zmm registers):**
+- `matrix_multiply_avx512`: 89% zmm usage
+  - Sample: `vfmadd213pd zmm0, zmm1, zmm2`
+- `fft_compute_kernel`: 76% zmm usage  
+  - Sample: `vaddpd zmm3, zmm4, zmm5`
 
-Would you like me to compare this with similar workloads or suggest optimizations?
-```
+**⚠️ AVX2 Legacy Functions (ymm registers):**
+- `legacy_sort_routine`: 0% zmm, 45% ymm usage
+  - Sample: `vpaddd ymm0, ymm1, ymm2`
+- `string_operations`: 0% zmm, 23% ymm usage
+  - Sample: `vperm2f128 ymm0, ymm1, ymm2, 0x20`
 
-#### **Schema Analysis**  
-```
-You: "What parameters can I configure for ISIM jobs on the SPR platform?"
-
-AI: I'll get the ISIM schema for the Intel-SPR-8380 platform.
-
-[AI calls GET /v1/jobs/isim/Intel-SPR-8380/schema]
-
-Available ISIM Configuration Parameters:
-- Core Frequency: 1.0-5.0 GHz (default: 3.2 GHz)
-- Memory Configuration: DDR4/DDR5 support, up to 512GB
-- Cache Settings: L1/L2/L3 configurable sizes and associativity
-- Trace Collection: Event types, sampling rates, buffer sizes
-- Performance Model: Detailed vs. Fast simulation modes
-- Execution Parameters: Step count, warmup length, ROI settings
-
-Would you like me to explain any specific parameter or suggest optimal settings?
+**🎯 Upgrade Candidates:**
+- Convert `legacy_sort_routine` to AVX512 for 2x throughput boost
+- Modernize `string_operations` with AVX512 string/text instructions
 ```
 
-#### **Platform Comparison**
+#### **Memory Bottleneck Detection**
 ```
-You: "Compare simulation performance between SPR and ICL platforms for my workload"
+User: "List functions whose memory operations experience high CPI, cache misses, or pagewalks according to the EMR memory profile data."
 
-AI: I'll analyze your workload performance across both platforms.
+AI: I'll analyze memory performance metrics from the simulation profiles.
 
-[AI calls /api/workloads/my-workload/performance?platforms=SPR,ICL]
+[AI downloads sim.memoryprofile, sim.memprofile, and correlates with function data]
 
-Performance Comparison:
-┌──────────────┬─────────────┬─────────────┬─────────────┐
-│ Platform     │ Avg Runtime │ IPC         │ Memory BW   │
-├──────────────┼─────────────┼─────────────┼─────────────┤
-│ Intel SPR    │ 2.3 hours   │ 1.47        │ 245 GB/s    │
-│ Intel ICL    │ 3.1 hours   │ 1.23        │ 198 GB/s    │
-└──────────────┴─────────────┴─────────────┴─────────────┘
+🐌 **Memory-Bound Functions Identified:**
 
-Recommendation: SPR platform is 26% faster for your workload due to:
-- Higher memory bandwidth utilization
-- Better branch prediction accuracy
-- Optimized cache hierarchy for your access patterns
+1. **sparse_matrix_solver (0x55f5b0cd9f20)**
+   - CPI: 3.2 (severely memory bound)
+   - L1 Cache Miss Rate: 23% (target: <5%)
+   - L2 Cache Miss Rate: 8.1% (target: <2%)
+   - Page Walks: 1.2M (excessive TLB pressure)
+   - **Root Cause:** Random memory access pattern, poor data locality
+
+2. **hash_table_lookup (0x55f5b0cdb110)**
+   - CPI: 2.8 (memory bound)
+   - L1 Cache Miss Rate: 18%
+   - DTLB Misses: 450K
+   - **Root Cause:** Pointer chasing, unpredictable access patterns
+
+3. **image_processing_filter (0x55f5b0cda890)**
+   - CPI: 2.1 (moderate memory bound)
+   - Memory Bandwidth: 85% utilized (near saturation)
+   - **Root Cause:** Large dataset, sequential but bandwidth-limited
+
+🔧 **Optimization Recommendations:**
+- Implement memory prefetching for sparse_matrix_solver
+- Consider data structure reorganization for hash_table_lookup
+- Optimize memory access patterns and consider tiling for image_processing_filter
 ```
 
-### 📊 Direct API Usage
+#### **Compiler Optimization Recommendations**
+```
+User: "Recommend optimal compiler flags for my EMR workload, considering it is memory bandwidth-intensive and supports AVX512. Justify the choices based on simulation profiles."
 
-#### **ISS API Integration (Read-Only)**
+AI: I'll analyze your workload characteristics and recommend optimal compiler settings.
+
+[AI analyzes instruction mix, memory patterns, and vectorization from simulation data]
+
+🚀 **Optimized Compiler Configuration for EMR Workload:**
+
+**Core Optimization Flags:**
+```bash
+-O3 -march=sapphirerapids -mtune=sapphirerapids
+-mavx512f -mavx512dq -mavx512cd -mavx512bw -mavx512vl
+-mprefer-vector-width=512 -funroll-loops
+-ffast-math -fno-math-errno
+```
+
+**Memory-Specific Optimizations:**
+```bash
+-mllvm -enable-loopinterchange -mllvm -enable-loop-distribute
+-fprefetch-loop-arrays -mllvm -prefetch-distance=64
+-falign-loops=64 -falign-functions=64
+```
+
+**Justification Based on Profile Analysis:**
+✅ **AVX512 Enabled:** 67% of hotspot functions show vectorizable loops
+✅ **Loop Unrolling:** Reduces loop overhead by 15% (measured in branch profile)  
+✅ **Prefetching:** Addresses 23% L1 cache miss rate in memory-bound functions
+✅ **Alignment:** Improves instruction fetch efficiency for large functions
+
+**Expected Performance Gains:**
+- 25-30% improvement in vectorized functions
+- 15-20% reduction in memory stalls
+- 5-10% overall execution time improvement
+```
+
+#### **Function-Specific Deep Analysis**
+```  
+User: "Provide a detailed instruction profile for function 0x55f5b0cda53d from the EMR simulation, including instruction mix, CPI, and memory hierarchy statistics."
+
+AI: I'll perform a detailed analysis of function 0x55f5b0cda53d.
+
+[AI cross-references function profile with instruction and memory data]
+
+🔍 **Detailed Function Analysis: 0x55f5b0cda53d (matrix_multiply_avx512)**
+
+**Execution Statistics:**
+- Total Instructions: 2.847B (34.2% of workload)
+- Total Cycles: 1.223B (28.1% of execution time)
+- Function CPI: 0.43 (excellent efficiency)
+- Call Count: 12,450 invocations
+- Avg Instructions/Call: 228,674
+
+**Instruction Mix:**
+- Vector Math (AVX512): 45.2% - `vfmadd213pd`, `vmulpd`, `vaddpd`
+- Memory Operations: 28.7% - `vmovupd`, `vmovapd` (mostly aligned)
+- Control Flow: 12.1% - Efficient loop structures
+- Integer/Scalar: 14.0% - Loop counters, address calculations
+
+**Memory Hierarchy Performance:**
+- L1I Cache Hit Rate: 99.8% (excellent code locality)
+- L1D Cache Hit Rate: 94.2% (good data locality)  
+- L2 Cache Hit Rate: 98.7% (minimal L3 spillover)
+- Memory Bandwidth Usage: 156 GB/s (62% of peak)
+- TLB Miss Rate: 0.03% (negligible)
+
+**Optimization Opportunities:**
+🎯 **Minor improvements possible:**
+- 5.8% unaligned loads could be eliminated with data padding
+- Loop unroll factor could increase from 4 to 8 for +3% performance
+```
+
+### 🔧 Direct API Usage
+
+#### **List All Jobs**
+```bash
+curl -X GET "http://localhost:8000/api/v1/jobs" \
+  -H "accept: application/json"
+
+# Response
+{
+  "jobs": [
+    {
+      "job_id": "caef4de5-00e2-4483-b23c-b4bd3bbb5876",
+      "status": "complete",
+      "job_type": "IWPS",
+      "platform_id": "Intel-SPR-8380",
+      "owner": "user@intel.com",
+      "created_at": "2025-11-05T10:30:00Z",
+      "description": "Performance analysis run"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "page_size": 50,
+    "total_pages": 1
+  }
+}
+```
+
+#### **Get Job Details**
+```bash
+curl -X GET "http://localhost:8000/api/v1/jobs/caef4de5-00e2-4483-b23c-b4bd3bbb5876" \
+  -H "accept: application/json"
+
+# Response
+{
+  "job": {
+    "job_id": "caef4de5-00e2-4483-b23c-b4bd3bbb5876",
+    "status": "complete", 
+    "job_type": "IWPS",
+    "platform_id": "Intel-SPR-8380",
+    "owner": "user@intel.com",
+    "created_at": "2025-11-05T10:30:00Z",
+    "completed_at": "2025-11-05T12:48:00Z",
+    "description": "Performance analysis run",
+    "execution_time_minutes": 138
+  },
+  "file_count": 16
+}
+```
+
+#### **List Job Files**
+```bash
+curl -X GET "http://localhost:8000/api/v1/jobs/caef4de5-00e2-4483-b23c-b4bd3bbb5876/files" \
+  -H "accept: application/json"
+
+# Response
+{
+  "files": [
+    "sim.bbprofile",
+    "sim.branchprofile", 
+    "sim.codefetchprofile",
+    "sim.contextprofile",
+    "sim.funcprofile",
+    "sim.functtprofile",
+    "sim.imgprofile",
+    "sim.insprofile", 
+    "sim.memoryprofile",
+    "sim.memprofile",
+    "sim.out",
+    "sim.prefetchprofile",
+    "sim.srcprofile",
+    "sim.stdout",
+    "sim.summary.profile",
+    "sim.threads.profile"
+  ],
+  "total_files": 16,
+  "job_id": "caef4de5-00e2-4483-b23c-b4bd3bbb5876"
+}
+```
+
+#### **Download Job File**
+```bash
+curl -X GET "http://localhost:8000/api/v1/jobs/caef4de5-00e2-4483-b23c-b4bd3bbb5876/files/sim.summary.profile" \
+  -H "accept: application/json"
+
+# Response: File content as JSON or binary data
+{
+  "file_content": "Simulation Summary Report\n========================\n..."
+}
+```
+
+#### **Filter Jobs by Status and Type**
+```bash
+# Filter by single job type and status
+curl -X GET "http://localhost:8000/api/v1/jobs?status=complete&job_type=IWPS&limit=10" \
+  -H "accept: application/json"
+
+# Filter by multiple job types (comma-separated)
+curl -X GET "http://localhost:8000/api/v1/jobs?job_type=IWPS,ISIM,WorkloadJobROI&status=inprogress" \
+  -H "accept: application/json"
+
+# Response: ISS API format with continuation token
+{
+  "jobs": [...],
+  "count": 47,
+  "continuation_token": "2025-11-06T07:24:51.298Z..."
+}
+
+# Use continuation token for next page
+curl -X GET "http://localhost:8000/api/v1/jobs?limit=10&continuation_token=2025-11-06T07:24:51.298Z..." \
+  -H "accept: application/json"
+```
+
+#### **Available Query Parameters**
+- `limit`: Maximum jobs to return (1-100, default: 100)
+- `status`: Job status filter (requested, queued, allocating, allocated, booting, inprogress, checkpointing, done, error, releasing, released, complete)
+- `job_type`: Job type filter - comma-separated values (IWPS, ISIM, Coho, NovaCoho, Instance, WorkloadJob, WorkloadJobROI, Custom)
+- `job_request_id`: Filter by specific job request ID
+- `queue`: Filter by job queue
+- `requested_by`: Filter by requesting user
+- `parent_instance_id`: Filter by parent instance ID
+- `workload_job_roi_id`: Filter by workload job ROI ID  
+- `continuation_token`: Pagination token for next page
+
+### � Python Client Usage
+
 ```python
-# Platform Operations
-response = requests.get("/v1/platforms")  # List all platforms
-response = requests.get("/v1/platforms/platform/Intel-SPR-8380")  # Get platform details
+import requests
+import asyncio
+from workload_analyzer.services.file_service import FileService
+from workload_analyzer.services.auth_service import AuthService
+from workload_analyzer.config import get_settings
 
-# Job Monitoring (Job IDs are UUIDs with 'a' prefix, e.g., a2290337-a3d4-40db-904d-79222997688f)
-response = requests.get("/v1/jobs")  # List all jobs
-response = requests.get("/v1/jobs/job/a2290337-a3d4-40db-904d-79222997688f")  # Get specific job details
+# Direct API calls
+BASE_URL = "http://localhost:8000/api/v1"
 
-# Instance Management
-response = requests.get("/v1/instances")  # List all instances
-response = requests.get("/v1/instances/instance/inst-12345")  # Get instance details
+# List all jobs with filtering
+response = requests.get(f"{BASE_URL}/jobs?status=complete&job_type=IWPS")
+jobs = response.json()["jobs"]
 
-# Schema Discovery
-response = requests.get("/v1/jobs/iwps/Intel-SPR-8380/schema")  # IWPS schema for platform
-response = requests.get("/v1/jobs/isim/Intel-ICL-1165G7/schema")  # ISIM schema for platform
-response = requests.get("/v1/jobs/coho/Intel-SPR-8380/schema")  # Coho schema for platform
+# Get specific job details
+job_id = "caef4de5-00e2-4483-b23c-b4bd3bbb5876"
+response = requests.get(f"{BASE_URL}/jobs/{job_id}")
+job_details = response.json()["job"]
 
-# File Service Operations (Different hostname)
-response = requests.get("/fs/files/a2290337-a3d4-40db-904d-79222997688f/iwps/artifacts/out")  # List job output files
-response = requests.get("/fs/files/a2290337-a3d4-40db-904d-79222997688f/iwps/artifacts/out/sim.out")  # Download specific file
+# List job files  
+response = requests.get(f"{BASE_URL}/jobs/{job_id}/files")
+files = response.json()["files"]
 
-# Performance Analysis (Workload Analyzer Extensions)
-response = requests.get("/api/analysis/cache-performance?job_id=a2290337-a3d4-40db-904d-79222997688f")
-response = requests.get("/api/analysis/platform-comparison?platforms=SPR,ICL")
-response = requests.get("/api/metrics/job/a2290337-a3d4-40db-904d-79222997688f/summary")
+# Download specific file
+filename = "sim.summary.profile"
+response = requests.get(f"{BASE_URL}/jobs/{job_id}/files/{filename}")
+file_content = response.json()["file_content"]
+
+# Using the service classes directly
+async def advanced_usage():
+    settings = get_settings()
+    auth_service = AuthService(settings)
+    file_service = FileService(settings, auth_service)
+    
+    async with file_service:
+        # List files
+        files = await file_service.list_files(settings.tenant_id, job_id)
+        print(f"Found {len(files)} files")
+        
+        # Download file as bytes
+        content = await file_service.download_file(settings.tenant_id, job_id, "sim.out")
+        print(f"Downloaded {len(content)} bytes")
+
+asyncio.run(advanced_usage())
 ```
 
 ## 🔧 Configuration
 
 ### ISS API Integration
-The application uses AWS Secrets Manager to securely retrieve ISS API credentials. Configure your connection in `config.py`:
+The application uses OAuth2 client credentials flow with AWS Secrets Manager for secure authentication:
 
 ```python
-import boto3
-import json
-
-def get_iss_credentials():
-    """Retrieve ISS API credentials from AWS Secrets Manager"""
-    client = boto3.client('secretsmanager', 
-                         region_name=os.getenv('AWS_REGION_ISS'))
+# Key configuration settings
+class Settings(BaseSettings):
+    # ISS API endpoints
+    iss_api_url: str = "https://api-test.workloadmgr.intel.com"
+    auth_domain: str  # OAuth2 token endpoint
+    tenant_id: str
     
-    secret_name = os.getenv('CLIENT_SECRET_NAME')
-    response = client.get_secret_value(SecretId=secret_name)
+    # AWS Secrets Manager
+    client_secret_name: str
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    aws_region: str = "us-west-2"
     
-    secret = json.loads(response['SecretString'])
-    return {
-        'client_id': secret['client_id'],
-        'client_secret': secret['client_secret']
-    }
-
-def get_auth_token():
-    """Generate authentication token using client credentials"""
-    credentials = get_iss_credentials()
-    auth_domain = os.getenv('AUTH_DOMAIN')
+    # AWS Bedrock AI Integration
+    bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    bedrock_temperature: float = 0.7
+    bedrock_max_tokens: int = 4096
+    bedrock_timeout: int = 180  # 3 minutes for AI responses
     
-    # Token generation logic here
-    # ... implementation details ...
+    # Timeout settings
+    iss_timeout_seconds: int = 300
+    file_service_timeout_seconds: int = 600
     
-    return access_token
-
-ISS_CONFIG = {
-    "base_url": os.getenv('ISS_API_URL'),
-    "auth_domain": os.getenv('AUTH_DOMAIN'),
-    "timeout": 30,
-    "retry_attempts": 3
-}
+    # Proxy configuration (optional)
+    def get_proxy_settings(self) -> Optional[str]:
+        return os.getenv('HTTPS_PROXY') or os.getenv('https_proxy')
 ```
 
 ### Authentication Flow
-1. **Secrets Retrieval**: Credentials are fetched from AWS Secrets Manager:
-   ```bash
-   aws secretsmanager get-secret-value --secret-id $CLIENT_SECRET_NAME | jq -cr '.SecretString'
+1. **Secrets Retrieval**: OAuth2 credentials fetched from AWS Secrets Manager
+   ```json
+   {
+     "client_id": "your-client-id",
+     "client_secret": "your-client-secret"  
+   }
    ```
 
-2. **Token Generation**: Using `client_id` and `client_secret` to generate access tokens
+2. **Token Exchange**: HTTP Basic Auth to OAuth2 token endpoint
+   ```bash
+   curl -X POST $AUTH_DOMAIN \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -u "$CLIENT_ID:$CLIENT_SECRET" \
+     -d "grant_type=client_credentials&scope="
+   ```
 
-3. **API Authentication**: Tokens are used to authenticate with ISS API endpoints
+3. **API Authentication**: Bearer token for all ISS API requests
+   ```bash
+   curl -H "Authorization: Bearer $ACCESS_TOKEN" $ISS_API_URL/v1/jobs
+   ```
 
-### AI Assistant Settings
-The AI assistant is automatically configured through the auto-bedrock-chat-fastapi integration, which:
-
-- **Auto-discovers API endpoints** and converts them to AI-callable tools
-- **Creates real-time WebSocket chat** with conversation memory
-- **Provides built-in web UI** at `/bedrock-chat/ui`
-- **Handles session management** for concurrent users
-- **Supports multiple AI models** from Amazon Bedrock
-
-#### Model Configuration Options
-
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `BEDROCK_MODEL_ID` | `anthropic.claude-3-5-sonnet-20241022-v2:0` | AI model for workload analysis |
-| `BEDROCK_TEMPERATURE` | `0.7` | Response creativity (0.0-1.0) |
-| `BEDROCK_MAX_TOKENS` | `4096` | Maximum response length |
-| `BEDROCK_MAX_TOOL_CALLS` | `10` | Maximum API calls per conversation |
-| `BEDROCK_SESSION_TIMEOUT` | `3600` | Chat session timeout (seconds) |
-
-#### Recommended Models for Intel Workloads
-
-| Model | Best For | Performance |
-|-------|----------|-------------|
-| **Claude 4.5 Sonnet** | Complex analysis, technical reasoning | 🚀 **Most capable** |
-| **Claude 3.5 Sonnet** | General workload analysis | ⚡ **Balanced** |
-| **Claude 3.5 Haiku** | Quick queries, cost optimization | 💰 **Fast & economical** |
-| **OpenAI GPT OSS** | Open-source transparency | 🌐 **Enterprise-friendly** |
-
-#### Security & Access Control
+### Proxy Configuration
+The application supports corporate proxy environments:
 
 ```python
-# Configure which endpoints AI can access
-add_bedrock_chat(
-    app,
-    bedrock_model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
-    aws_region="us-east-1",
-    
-    # Control AI access to endpoints
-    allowed_paths=["/api/jobs", "/api/metrics", "/api/platforms"],
-    excluded_paths=["/admin", "/internal", "/sensitive"],
-    
-    # Custom system prompt for Intel workloads
-    custom_system_prompt="""
-    You are an expert Intel simulation workload analyst. 
-    Help users optimize their IWPS, ISIM, and simulation jobs.
-    Focus on performance analysis, configuration tuning, and troubleshooting.
-    Always explain your reasoning and cite specific metrics when available.
-    """
-)
-- Handles context management for workload discussions
-- Provides domain-specific knowledge for Intel simulation workloads
+# Environment variables for proxy
+export HTTPS_PROXY="http://proxy-chain.intel.com:912"
+export HTTP_PROXY="http://proxy-chain.intel.com:912"
+
+# Automatic proxy detection in services
+class FileService:
+    async def _ensure_session(self):
+        proxy_url = os.getenv('HTTPS_PROXY') or os.getenv('https_proxy')
+        if proxy_url:
+            self._session = aiohttp.ClientSession(proxy=proxy_url)
+```
+
+### Error Handling
+Comprehensive error handling with proper HTTP status codes:
+
+| Error Type | HTTP Status | Description |
+|------------|-------------|-------------|
+| **Authentication** | 401 | Invalid or expired OAuth2 token |
+| **Authorization** | 403 | Access denied to specific resource |
+| **Not Found** | 404 | Job, file, or endpoint not found |
+| **Service Error** | 502 | ISS API or file service unavailable |
+| **Timeout** | 504 | Request timeout (configurable) |
 
 ## 📁 Project Structure
 
 ```
 workload-analyzer/
-├── README.md              # This file
-├── schema_jobs.json       # Complete job data schema
-├── pyproject.toml         # Poetry dependency management
-├── requirements.txt       # Pip dependency management (alternative)
-├── main.py               # FastAPI application (to be created)
-```
-workload-analyzer/
-├── README.md              # This file
-├── schema_jobs.json       # Complete job data schema
-├── pyproject.toml         # Poetry dependency management
-├── requirements.txt       # Pip dependency management (alternative)
-├── .env.example           # Environment configuration template
-├── main.py               # FastAPI application (to be created)
-├── models/               # Data models and schemas
-├── services/             # ISS API integration services
-├── analysis/             # AI analysis modules
-├── config.py             # Configuration management
-└── tests/                # Unit and integration tests
+├── README.md                           # Project documentation  
+├── .env.example                        # Environment configuration template
+├── pyproject.toml                      # Poetry dependency management and build config
+├── schema_jobs.json                    # ISS job data schema definition
+├── poetry.lock                         # Locked dependency versions (auto-generated)
+│
+├── workload_analyzer/                  # Main application package
+│   ├── __init__.py                     # Package initialization
+│   ├── main.py                         # FastAPI application entry point  
+│   ├── config.py                       # Configuration management with Pydantic v2
+│   ├── exceptions.py                   # Custom exception classes
+│   ├── models/                         # Pydantic data models and schemas
+│   │   ├── __init__.py                 # Model exports (cleaned up)
+│   │   ├── job_models.py               # ISS job data models with enhanced JobStatus enum
+│   │   ├── platform_models.py          # Platform and instance models
+│   │   └── response_models.py          # API response models (streamlined)
+│   ├── services/                       # External service integrations
+│   │   ├── __init__.py
+│   │   ├── iss_client.py               # ISS API client with continuation token support
+│   │   ├── file_service.py             # ISS file service with proxy support
+│   │   └── auth_service.py             # AWS Secrets Manager integration
+│   ├── api/                            # FastAPI route definitions
+│   │   ├── __init__.py                 # Router exports (jobs only)
+│   │   └── jobs.py                     # Job management with ISS API compliance
+│   └── analysis/                       # Analysis modules (available but disabled)
+│       ├── __init__.py
+│       ├── performance_analyzer.py
+
+## 📝 Changelog
+
+### Recent Updates (November 2025)
+
+#### AWS Bedrock AI Integration
+- **✅ Claude Model Support**: Integrated AWS Bedrock with Claude 4.5 Sonnet for intelligent workload analysis
+- **✅ Chat Interface**: WebSocket-based natural language interface for simulation data queries
+- **✅ Timeout Optimization**: Enhanced timeout handling for large language model responses (180s timeout)
+- **✅ Error Handling**: Comprehensive exception handling with full traceback logging for debugging
+- **✅ Configuration**: Environment-based Bedrock model and parameter configuration
+
+#### ISS API Compliance & Enhanced Job Management
+- **✅ JobStatus Enum**: Updated to match ISS API specification with 12 status values
+- **✅ JobType Support**: Added NovaCoho job type support and enhanced validation  
+- **✅ ISS Response Format**: Jobs endpoint now returns native ISSJobsResponse format
+- **✅ Continuation Token Pagination**: Replaced offset-based pagination with ISS continuation tokens
+- **✅ Comma-Separated Filtering**: Support for multiple job types in job_type parameter
+- **✅ Enhanced Validation**: Strict validation with descriptive error messages for invalid job types/statuses
+
+#### Technical Improvements
+- **✅ Model Cleanup**: Removed unused imports and streamlined response models
+- **✅ Error Handling**: Improved validation and error messages for better developer experience  
+- **✅ ISS Integration**: Full compliance with ISS API parameter names and response structures
+- **✅ Type Safety**: Enhanced type validation for job_type parameters with JobType enum
+│       ├── platform_optimizer.py
+│       └── job_insights.py
+│
+└── tests/                              # Test suite
+    ├── __init__.py
+    ├── conftest.py                     # Pytest fixtures with mock settings
+    ├── test_models/                    # Model validation tests
+    ├── test_services/                  # Service integration tests
+    └── test_api/                       # API endpoint tests
 ```
 
-## 🤝 Contributing
+## � Current State
+
+**Version 1.0 - Streamlined Focus**
+
+This version has been cleaned up to focus on core job management functionality:
+
+✅ **Active Features:**
+- Job listing, filtering, and detail retrieval
+- File listing and download from simulation jobs  
+- OAuth2 authentication with ISS API
+- **AWS Bedrock AI Integration**: Intelligent workload analysis with Claude models
+- **AI Chat Interface**: Natural language querying of simulation data
+- Corporate proxy support
+- Comprehensive error handling and logging
+
+🚧 **Temporarily Disabled:**
+- Platform management endpoints (simplified to core functionality)
+- Instance monitoring endpoints  
+- Advanced analysis modules (basic AI analysis available)
+
+The codebase has been streamlined by removing ~200+ lines of unused code while maintaining all essential functionality for production job management workflows.
+
+## �🤝 Contributing
 
 We welcome contributions! Please see our contributing guidelines:
 
