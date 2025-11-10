@@ -255,7 +255,7 @@ websockets = ">=11.0.0"
 type = "git"
 url = "https://github.com/gabrielbriones/auto-bedrock-chat-fastapi.git"
 reference = "main"
-resolved_reference = "c3f533a345d8f59aaa80a50b2d98164292bb3c98"
+resolved_reference = "857f5b2a91848d722551b77914476bc6cd898597"
 
 [[package]]
 name = "black"
@@ -2923,4 +2923,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "13ee09bca6a3adbcec55ef1dc1694c4e5d9c51506036e88d87d9b26f98ae866c"
+content-hash = "25085d9b205b38f7b3d3b51effc3baec81d4c43b26bfdd38efa6692f4da4af13"
