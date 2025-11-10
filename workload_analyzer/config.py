@@ -103,6 +103,13 @@ class Settings(BaseSettings):
     bedrock_max_sessions: int = Field(default=1000, env="BEDROCK_MAX_SESSIONS")
     bedrock_session_timeout: int = Field(default=3600, env="BEDROCK_SESSION_TIMEOUT")
 
+    # Bedrock UI Configuration
+    bedrock_ui_title: str = Field(default="AI Assistant", env="BEDROCK_UI_TITLE")
+    bedrock_ui_welcome_message: str = Field(
+        default="Welcome! I'm your AI assistant. I can help you interact with the API endpoints. Try asking me to retrieve data, create resources, or explain what operations are available.",
+        env="BEDROCK_UI_WELCOME_MESSAGE"
+    )
+
     # Security Configuration
     jwt_secret_key: str = Field(
         default="your-secret-key-here-change-in-production", env="JWT_SECRET_KEY"

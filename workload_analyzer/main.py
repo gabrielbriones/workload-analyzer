@@ -420,7 +420,10 @@ def setup_ai_integration(app: FastAPI, settings: Settings) -> None:
             app,
             # These list fields need to be set in code (Pydantic v2 limitation)
             allowed_paths=settings.bedrock_allowed_paths,
-            excluded_paths=settings.bedrock_excluded_paths
+            excluded_paths=settings.bedrock_excluded_paths,
+            # UI Configuration
+            ui_title=settings.bedrock_ui_title,
+            ui_welcome_message=settings.bedrock_ui_welcome_message
             # All other settings (model_id, temperature, endpoints, etc.) come from .env
         )
 
