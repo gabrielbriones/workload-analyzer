@@ -21,6 +21,7 @@ from ..models.response_models import (
 )
 from ..services.file_service import FileService
 from ..services.iss_client import ISSClient
+from ..utils.response_summarizer import summarize_jobs_response
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +64,11 @@ async def list_jobs(
     parent_instance_id: Optional[str] = Query(None, description="Filter jobs by parent instance ID"),
     workload_job_roi_id: Optional[str] = Query(None, description="Filter jobs by workload job ROI ID"),
     continuation_token: Optional[str] = Query(None, description="Token for pagination continuation"),
+    summarize: bool = Query(False, description="If true, return summarized job data (reduced context for LLM)"),
     iss_client: ISSClient = Depends(get_iss_client),
 ):
     """List jobs with filtering and pagination matching ISS API spec."""
-    logger.info(f"📋 Listing jobs: limit={limit}, status={job_status}, job_type={job_type}, queue={queue}")
+    logger.info(f"📋 Listing jobs: limit={limit}, status={job_status}, job_type={job_type}, queue={queue}, summarize={summarize}")
     
     try:
         # Validate job_type parameter if provided
@@ -95,7 +97,24 @@ async def list_jobs(
                 continuation_token=continuation_token,
             )
 
-        # Return the ISS API response directly
+        # Optionally summarize response for LLM context efficiency
+        if summarize:
+            logger.info(f"Summarizing {len(iss_response.jobs)} jobs for LLM context efficiency")
+            summarized = summarize_jobs_response(
+                {
+                    'jobs': [job.dict() for job in iss_response.jobs],
+                    'continuation_token': iss_response.continuation_token
+                },
+                max_jobs=50
+            )
+            # Convert back to ISSJobsResponse
+            iss_response = ISSJobsResponse(
+                jobs=[JobRequest(**job) for job in summarized['jobs']],
+                count=summarized['count'],
+                continuation_token=summarized.get('continuation_token')
+            )
+
+        # Return the ISS API response
         return iss_response
 
     except ISSAuthenticationError as e:
