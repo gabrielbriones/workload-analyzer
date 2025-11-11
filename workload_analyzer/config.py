@@ -34,9 +34,6 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, env="PORT")
 
     # ISS API Configuration
-    iss_base_url: str = Field(
-        default="https://api-test.workloadmgr.intel.com", env="ISS_BASE_URL"
-    )
     iss_api_url: str = Field(
         default="https://api-test.workloadmgr.intel.com", env="ISS_API_URL"
     )

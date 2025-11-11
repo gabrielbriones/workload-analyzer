@@ -169,7 +169,7 @@ class ISSClient:
         Returns:
             Full URL
         """
-        base_url = self.settings.iss_base_url.rstrip("/")
+        base_url = self.settings.iss_api_url.rstrip("/")
         endpoint = endpoint.lstrip("/")
         return f"{base_url}/v1/{endpoint}"
 

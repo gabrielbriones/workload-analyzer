@@ -65,8 +65,8 @@ async def lifespan(app: FastAPI):
         settings = get_settings()
 
         # Validate critical configuration
-        if not settings.iss_base_url:
-            raise ConfigurationError("ISS_BASE_URL is required")
+        if not settings.iss_api_url:
+            raise ConfigurationError("ISS_API_URL is required")
 
         if not settings.aws_region:
             raise ConfigurationError("AWS_REGION is required")
