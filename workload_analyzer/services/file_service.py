@@ -18,15 +18,17 @@ logger = logging.getLogger(__name__)
 class FileService:
     """Service for accessing files from ISS file service."""
 
-    def __init__(self, settings: Settings, auth_service=None):
+    def __init__(self, settings: Settings, auth_service=None, iss_client=None):
         """Initialize the file service.
 
         Args:
             settings: Application settings
             auth_service: Authentication service for OAuth2 tokens
+            iss_client: Optional ISS client for job type lookup
         """
         self.settings = settings
         self.auth_service = auth_service
+        self.iss_client = iss_client
         self._session: Optional[aiohttp.ClientSession] = None
         self._access_token: Optional[str] = None
 
@@ -153,20 +155,46 @@ class FileService:
         path = path.lstrip("/")
         return urljoin(f"{base_url}/", path)
 
-    def _build_file_path(self, job_id: str, file_path: str = "") -> str:
-        """Build the correct file service path for job files.
+    async def _get_artifact_type_for_job(self, job_id: str) -> str:
+        """Get the artifact type (iwps, isim, coho) based on job type.
 
         Args:
             job_id: Job identifier
-            file_path: Optional file path within the job artifacts
 
         Returns:
-            Complete file service path
+            Artifact type ('iwps', 'isim', 'coho')
         """
-        base_path = f"fs/files/{job_id}/iwps/artifacts/out"
-        if file_path:
-            base_path = f"{base_path}/{file_path.strip('/')}"
-        return base_path
+        try:
+            if not self.iss_client:
+                logger.warning("ISS client not available, defaulting to 'iwps'")
+                return "iwps"
+
+            # Fetch job details from ISS
+            async with self.iss_client:
+                job = await self.iss_client.get_job(job_id)
+                job_type = job.job_type if hasattr(job, 'job_type') else None
+
+                # If job_type is an enum, get its value
+                if hasattr(job_type, 'value'):
+                    job_type = job_type.value
+
+                logger.debug(f"Job {job_id} type: {job_type}")
+
+                # Map job types to artifact types
+                if job_type == "ISIM":
+                    return "isim"
+                elif job_type == "NovaCoho":
+                    return "coho"
+                elif job_type == "IWPS":
+                    return "iwps"
+                else:
+                    # Default to iwps for unknown types
+                    logger.warning(f"Unknown job type '{job_type}', defaulting to 'iwps'")
+                    return "iwps"
+
+        except Exception as e:
+            logger.error(f"Failed to determine artifact type for job {job_id}: {e}")
+            return "iwps"  # Default to iwps on error
 
     async def _request(
         self, method: str, tenant: str, path: str, params: Optional[dict] = None
@@ -251,11 +279,16 @@ class FileService:
             List of filenames
         """
         try:
-            # Use the correct file service path for IWPS artifacts
-            file_path = self._build_file_path(job_id, path)
+            # Determine the correct artifact type for this job
+            artifact_type = await self._get_artifact_type_for_job(job_id)
+
+            # Build the correct file service path
+            base_path = f"fs/files/{job_id}/{artifact_type}/artifacts/out"
+            if path:
+                base_path = f"{base_path}/{path.strip('/')}"
 
             async with await self._request(
-                "GET", tenant, file_path, {}
+                "GET", tenant, base_path, {}
             ) as response:
                 data = await response.json()
                 logger.debug(f"File list data retrieved: {data}")
@@ -298,9 +331,13 @@ class FileService:
             File content as bytes
         """
         try:
-            path = self._build_file_path(job_id, file_path)
+            # Determine the correct artifact type for this job
+            artifact_type = await self._get_artifact_type_for_job(job_id)
 
-            async with await self._request("GET", tenant, path) as response:
+            # Build the correct file service path
+            base_path = f"fs/files/{job_id}/{artifact_type}/artifacts/out/{file_path.strip('/')}"
+
+            async with await self._request("GET", tenant, base_path) as response:
                 content = await response.read()
 
                 logger.info(f"Downloaded file {file_path} ({len(content)} bytes)")
