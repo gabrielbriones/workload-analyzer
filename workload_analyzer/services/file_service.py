@@ -155,35 +155,6 @@ class FileService:
         path = path.lstrip("/")
         return urljoin(f"{base_url}/", path)
 
-    def _build_file_path(self, job_id: str, file_path: str = "") -> str:
-        """Build the correct file service path for job files.
-
-        Args:
-            job_id: Job identifier
-            file_path: Optional file path within the job artifacts
-
-        Returns:
-            Complete file service path
-        """
-        # Default artifact type is "iwps" for IWPS jobs
-        artifact_type = "iwps"
-
-        # If ISS client is available, try to determine artifact type from job
-        if self.iss_client:
-            try:
-                # Try to get job type synchronously (this is a helper method)
-                # We'll need to make this async later
-                logger.debug(f"Fetching job type for {job_id} to determine artifact path")
-                # For now, we'll use the async method via a stored mapping
-                # The actual job type lookup will be done by the caller
-            except Exception as e:
-                logger.warning(f"Could not fetch job type for {job_id}: {e}")
-
-        base_path = f"fs/files/{job_id}/{artifact_type}/artifacts/out"
-        if file_path:
-            base_path = f"{base_path}/{file_path.strip('/')}"
-        return base_path
-
     async def _get_artifact_type_for_job(self, job_id: str) -> str:
         """Get the artifact type (iwps, isim, coho) based on job type.
 
