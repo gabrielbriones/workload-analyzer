@@ -36,12 +36,12 @@ async def get_iss_client(settings: Settings = Depends(get_settings)) -> ISSClien
     return ISSClient(settings, auth_service)
 
 
-async def get_file_service(settings: Settings = Depends(get_settings)) -> FileService:
+async def get_file_service(settings: Settings = Depends(get_settings), iss_client: ISSClient = Depends(get_iss_client)) -> FileService:
     """Dependency to get file service."""
     from ..services.auth_service import AuthService
     
     auth_service = AuthService(settings)
-    return FileService(settings, auth_service)
+    return FileService(settings, auth_service, iss_client)
 
 
 @router.get(
