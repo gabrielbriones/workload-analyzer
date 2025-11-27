@@ -198,7 +198,7 @@ async def list_job_files(
     logger.info(f"📁 Listing files for job: {job_id}")
     try:
         # Keep ISS client open for the entire operation to support connection pooling
-        # and avoid redundant connection setup if file_service needs to query ISS
+        # and because the ISS client is needed to obtain the tenant_id for file_service (file_service does not query ISS here)
         async with iss_client:
             job = await iss_client.get_job(job_id)
             
