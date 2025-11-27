@@ -35,7 +35,7 @@ def get_iss_client(
     return ISSClient(settings, bearer_token)
 
 
-async def get_file_service(
+def get_file_service(
     bearer_token: str = Depends(get_bearer_token),
     settings: Settings = Depends(get_settings),
     iss_client: ISSClient = Depends(get_iss_client)
