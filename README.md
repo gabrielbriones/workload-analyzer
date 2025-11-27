@@ -681,7 +681,7 @@ The bearer token is:
 - Managed by the auto-bedrock-chat-fastapi integration
 - Automatically included in the Authorization header
 
-3. **API Authentication**: Bearer token for all ISS API requests
+**API Authentication**: Bearer token for all ISS API requests
    ```bash
    curl -H "Authorization: Bearer $ACCESS_TOKEN" $ISS_API_URL/v1/jobs
    ```
