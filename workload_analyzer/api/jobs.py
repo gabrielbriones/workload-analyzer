@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
 from fastapi.responses import JSONResponse
 
 from ..config import Settings, get_settings
@@ -28,20 +28,41 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
-async def get_iss_client(settings: Settings = Depends(get_settings)) -> ISSClient:
-    """Dependency to get ISS client."""
-    from ..services.auth_service import AuthService
-
-    auth_service = AuthService(settings)
-    return ISSClient(settings, auth_service)
-
-
-async def get_file_service(settings: Settings = Depends(get_settings), iss_client: ISSClient = Depends(get_iss_client)) -> FileService:
-    """Dependency to get file service."""
-    from ..services.auth_service import AuthService
+async def get_bearer_token(authorization: str = Header(...)) -> str:
+    """Extract and validate bearer token from Authorization header.
     
-    auth_service = AuthService(settings)
-    return FileService(settings, auth_service, iss_client)
+    Args:
+        authorization: Authorization header value
+        
+    Returns:
+        Bearer token
+        
+    Raises:
+        HTTPException: If token format is invalid
+    """
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format. Expected 'Bearer <token>'",
+        )
+    return authorization[7:]  # Remove "Bearer " prefix
+
+
+async def get_iss_client(
+    bearer_token: str = Depends(get_bearer_token),
+    settings: Settings = Depends(get_settings)
+) -> ISSClient:
+    """Dependency to get ISS client with bearer token."""
+    return ISSClient(settings, bearer_token)
+
+
+async def get_file_service(
+    bearer_token: str = Depends(get_bearer_token),
+    settings: Settings = Depends(get_settings),
+    iss_client: ISSClient = Depends(get_iss_client)
+) -> FileService:
+    """Dependency to get file service with bearer token."""
+    return FileService(settings, bearer_token, iss_client)
 
 
 @router.get(

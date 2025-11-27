@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
 
 from ..config import Settings, get_settings
 from ..exceptions import (
@@ -23,12 +23,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/platforms", tags=["platforms"])
 
 
-async def get_iss_client(settings: Settings = Depends(get_settings)) -> ISSClient:
-    """Dependency to get ISS client."""
-    from ..services.auth_service import AuthService
+async def get_bearer_token(authorization: str = Header(...)) -> str:
+    """Extract and validate bearer token from Authorization header.
+    
+    Args:
+        authorization: Authorization header value
+        
+    Returns:
+        Bearer token
+        
+    Raises:
+        HTTPException: If token format is invalid
+    """
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format. Expected 'Bearer <token>'",
+        )
+    return authorization[7:]  # Remove "Bearer " prefix
 
-    auth_service = AuthService(settings)
-    return ISSClient(settings, auth_service)
+
+async def get_iss_client(
+    bearer_token: str = Depends(get_bearer_token),
+    settings: Settings = Depends(get_settings)
+) -> ISSClient:
+    """Dependency to get ISS client with bearer token."""
+    return ISSClient(settings, bearer_token)
 
 
 @router.get(

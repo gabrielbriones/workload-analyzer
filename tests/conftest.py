@@ -28,13 +28,8 @@ def mock_settings() -> Settings:
         # ISS API Configuration
         iss_api_url="https://api-test.workloadmgr.intel.com",
         iss_environment="test",
-        auth_domain="https://azad.auth.us-west-2.amazoncognito.com/oauth2/token",
-        client_secret_name="test/cognito/client_creds/services-backend",
         
         # AWS Configuration
-        aws_access_key_id_iss="AKIA_TEST_ISS",
-        aws_secret_access_key_iss="test-secret-iss",
-        aws_region_iss="us-west-2",
         aws_access_key_id="AKIA_TEST_BEDROCK",
         aws_secret_access_key="test-secret-bedrock",
         aws_region="us-east-1",
@@ -197,19 +192,6 @@ def sample_job_detail() -> JobDetail:
         exit_code=0,
         tenant_id="test-tenant"  # Tenant ID for multi-tenant support
     )
-
-
-@pytest.fixture
-def mock_auth_service():
-    """Mock authentication service."""
-    mock = AsyncMock()
-    from workload_analyzer.services.auth_service import Credentials
-    mock.get_iss_credentials.return_value = Credentials(
-        client_id="test_client",
-        client_secret="test_secret"
-    )
-    mock.authenticate.return_value = True
-    return mock
 
 
 @pytest.fixture
