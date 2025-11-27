@@ -223,7 +223,7 @@ The project uses a comprehensive JSON schema (`schema_jobs.json`) that defines:
    Or set environment variables directly:
    ```bash
    # ISS API configuration
-   export ISS_ENVIRONMENT="test"  # dev or test for dynamic URL construction
+   export ISS_ENVIRONMENT="test"  # dev, test or prod for dynamic URL construction
    export AUTH_DOMAIN="https://cognito-idp.us-west-2.amazonaws.com/your-pool/oauth2/token"
    export CLIENT_SECRET_NAME="test/cognito/client_creds/services-backend"
    

@@ -28,7 +28,7 @@ class TestBedrockIntegration:
             aws_secret_access_key=mock_settings.aws_secret_access_key
         )
         
-        assert config.model_id == "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        assert config.model_id == "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
         assert config.temperature == 0.7
         assert config.max_tokens == 4096
         assert config.timeout == 30  # ChatConfig uses default timeout

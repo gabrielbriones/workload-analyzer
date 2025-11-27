@@ -78,7 +78,7 @@ class TestSettings:
             assert settings.get_iss_url() == "https://custom-iss.company.com"
     
     def test_iss_url_default_pattern(self):
-        """Test ISS URL with default pattern uses environment."""
+        """Test ISS URL with prod environment uses production endpoint."""
         env_vars = {
             "ISS_API_URL": "https://api-test.workloadmgr.intel.com",
             "ISS_ENVIRONMENT": "prod"
@@ -87,8 +87,8 @@ class TestSettings:
         with patch.dict(os.environ, env_vars, clear=True):
             settings = Settings()
             
-            # Default pattern should use environment to construct URL
-            assert settings.get_iss_url() == "https://api-prod.workloadmgr.intel.com"
+            # Prod environment should use production endpoint
+            assert settings.get_iss_url() == "https://api.simicsservice.intel.com"
     
     def test_system_prompt_generation(self):
         """Test system prompt generation."""
