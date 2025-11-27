@@ -22,26 +22,11 @@ from ..models.response_models import (
 from ..services.file_service import FileService
 from ..services.iss_client import ISSClient
 from ..utils.response_summarizer import summarize_jobs_response
+from .dependencies import get_bearer_token, get_iss_client, get_file_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-
-
-async def get_iss_client(settings: Settings = Depends(get_settings)) -> ISSClient:
-    """Dependency to get ISS client."""
-    from ..services.auth_service import AuthService
-
-    auth_service = AuthService(settings)
-    return ISSClient(settings, auth_service)
-
-
-async def get_file_service(settings: Settings = Depends(get_settings), iss_client: ISSClient = Depends(get_iss_client)) -> FileService:
-    """Dependency to get file service."""
-    from ..services.auth_service import AuthService
-    
-    auth_service = AuthService(settings)
-    return FileService(settings, auth_service, iss_client)
 
 
 @router.get(

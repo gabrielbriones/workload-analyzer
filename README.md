@@ -18,25 +18,28 @@ The Workload Analyzer serves as an intelligent interface to Intel Simulation Ser
 ## 🏗️ Architecture
 
 ```
-                                        ┌─────────────────────┐
-                               ┌───────▶│ Intel Simulation    │
-                               │        │ Service (ISS) API   │
-                               │        └─────────────────────┘
-┌─────────────────┐    ┌──────────────────┐
-│   User/Client   │───▶│  FastAPI Server  │        ┌─────────────────────┐
-│                 │    │(API wrapper &    │───────▶│ ISS File Service    │
-└─────────────────┘    │ chat interface)  │        │ (Artifacts & Logs)  │
-                       └──────────────────┘        └─────────────────────┘
-                               │
-                               │        ┌──────────────────┐
-                               ├───────▶│ OAuth2 Server +  │
-                               │        │ AWS Secrets Mgr  │
-                               │        └──────────────────┘
-                               │
-                               │        ┌─────────────────────┐
-                               └───────▶│ AWS Bedrock         │
-                                        │ (AI Models)         │
-                                        └─────────────────────┘
+┌─────────────────┐              ┌──────────────────┐
+│   User/Client   │─────────────▶│  FastAPI Server  │────────────────────────────────────┐
+│ (AI Chat UI)    │              │(API wrapper &    │                                    │
+└─────────────────┘              │ chat interface)  │                                    │
+                                 └──┬───────────┬───┘                                    │
+                                    │           │                                        │
+                             .simicsservice     │ Bearer Token                           │
+                             credentials        │                                        │
+                             (client_id,        └─────┬───────────────┐                  │
+                              client_secret,          │               │                  │
+                              auth_domain)        ┌───▼────────┐  ┌───▼────────────┐  ┌──▼──────────────┐
+                                    │             │ Intel ISS  │  │ ISS File       │  │  AWS Bedrock    │
+                                    │             │ API        │  │ Service        │  │  (AI Models)    │
+                                    │             │(Artifacts &│  │ (Artifacts &   │  │(Direct AWS Auth)│
+                                    │             │ Logs)      │  │ Logs)          │  │                 │
+                                    │             └────────────┘  └────────────────┘  └─────────────────┘
+                                    │
+                                    ▼
+                           ┌──────────────────┐
+                           │  AWS Cognito     │
+                           │  (Token Exchange)│
+                           └──────────────────┘
 ```
 
 ## 📋 Features
@@ -44,7 +47,7 @@ The Workload Analyzer serves as an intelligent interface to Intel Simulation Ser
 ### Core Functionality
 - **Job Management**: List, filter, and retrieve detailed information about ISS simulation jobs
 - **File Operations**: Access simulation output files, logs, and artifacts with secure download capabilities
-- **Authentication**: OAuth2 client credentials flow with AWS Secrets Manager integration
+- **Authentication**: Bearer token authentication with ISS-generated credentials
 - **Corporate Proxy**: Full support for corporate network environments with proxy configuration
 - **Error Handling**: Comprehensive error handling with proper HTTP status codes and logging
 
@@ -90,7 +93,7 @@ The application provides a focused set of job management and file access endpoin
 ### **File Operations**  
 - **List Files**: `GET /api/v1/jobs/{job_id}/files` - List all output files and artifacts for a job
 - **Download Files**: `GET /api/v1/jobs/{job_id}/files/{filename}` - Download specific job output files
-- **Authentication**: All endpoints use OAuth2 Bearer token authentication with ISS credentials
+- **Authentication**: All endpoints require bearer token in `Authorization: Bearer <token>` header
 
 ### **AI-Powered Analysis** 🤖
 - **Chat Interface**: `/bedrock-chat` - WebSocket endpoint for natural language workload analysis
@@ -100,8 +103,8 @@ The application provides a focused set of job management and file access endpoin
 ### **Authentication Flow**
 | Step | Description | Implementation |
 |------|-------------|----------------|
-| **Credentials** | AWS Secrets Manager | ISS client credentials retrieved securely |
-| **Token Exchange** | OAuth2 Client Credentials | HTTP Basic Auth with client_id/client_secret |
+| **Credential Source** | ISS UI CLI Access | Generate `.simicsservice` file from ISS user menu |
+| **Token Acquisition** | Bearer Token | Pass pre-authenticated bearer token from ISS to AI Chat |
 | **API Access** | Bearer Token | All ISS API requests use `Authorization: Bearer {token}` |
 | **Proxy Support** | Corporate Networks | Full proxy configuration for enterprise environments |
 
@@ -187,8 +190,8 @@ The project uses a comprehensive JSON schema (`schema_jobs.json`) that defines:
 
 ### Prerequisites
 - Python 3.9 or higher
-- Access to Intel Simulation Service (ISS) API
-- AWS credentials for ISS authentication (managed via AWS Secrets Manager)
+- Access to Intel Simulation Service (ISS) UI and API
+- Generated ISS CLI credentials (obtained from ISS UI)
 - Corporate proxy settings (if running in enterprise environment)
 - Poetry or pip for dependency management
 
@@ -217,28 +220,26 @@ The project uses a comprehensive JSON schema (`schema_jobs.json`) that defines:
    Copy and customize the environment template:
    ```bash
    cp .env.example .env
-   # Edit .env with your actual credentials and configuration
+   # Edit .env with your actual configuration (most settings have defaults)
    ```
    
-   Or set environment variables directly:
+   Optional environment variables:
    ```bash
    # ISS API configuration
-   export ISS_ENVIRONMENT="test"  # dev, test or prod for dynamic URL construction
-   export AUTH_DOMAIN="https://cognito-idp.us-west-2.amazonaws.com/your-pool/oauth2/token"
-   export CLIENT_SECRET_NAME="test/cognito/client_creds/services-backend"
-   
-   # AWS credentials for ISS authentication
-   export AWS_ACCESS_KEY_ID="your-aws-key"
-   export AWS_SECRET_ACCESS_KEY="your-aws-secret"
-   export AWS_REGION="us-west-2"
+   export ISS_ENVIRONMENT="test"  # dev, test, or prod for dynamic URL construction
    
    # Corporate proxy (if required)
    export HTTPS_PROXY="http://proxy-chain.intel.com:912"
    export HTTP_PROXY="http://proxy-chain.intel.com:912"
    
-   # Timeout settings
+   # Timeout settings (optional, defaults provided)
    export ISS_TIMEOUT_SECONDS="300"
    export FILE_SERVICE_TIMEOUT_SECONDS="600"
+   
+   # Bedrock AI configuration
+   export BEDROCK_MODEL_ID="us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+   export BEDROCK_TEMPERATURE="0.7"
+   export BEDROCK_MAX_TOKENS="4096"
    ```
 
 4. **Run the application**:
@@ -603,7 +604,7 @@ asyncio.run(advanced_usage())
 ## 🔧 Configuration
 
 ### ISS API Integration
-The application uses OAuth2 client credentials flow with AWS Secrets Manager for secure authentication:
+The application uses bearer token authentication with credentials generated directly from the ISS UI:
 
 ```python
 # Key configuration settings
@@ -611,13 +612,6 @@ class Settings(BaseSettings):
     # ISS API endpoints - dynamically constructed from environment
     iss_api_url: str = "https://api-test.workloadmgr.intel.com"  # Can override for custom URLs
     iss_environment: str = "test"  # Used to construct URL: https://api-{environment}.workloadmgr.intel.com
-    auth_domain: str  # OAuth2 token endpoint
-    
-    # AWS Secrets Manager
-    client_secret_name: str
-    aws_access_key_id: str
-    aws_secret_access_key: str
-    aws_region: str = "us-west-2"
     
     # AWS Bedrock AI Integration
     bedrock_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
@@ -644,23 +638,50 @@ class Settings(BaseSettings):
 ```
 
 ### Authentication Flow
-1. **Secrets Retrieval**: OAuth2 credentials fetched from AWS Secrets Manager
-   ```json
-   {
-     "client_id": "your-client-id",
-     "client_secret": "your-client-secret"  
-   }
+
+#### **Obtaining ISS CLI Credentials**
+
+To use the Workload Analyzer AI Chat interface, you need to generate CLI credentials from the ISS UI:
+
+1. **Log in to ISS UI**: Navigate to your ISS instance dashboard
+2. **Access User Menu**: Click the user icon (👤) in the top right corner
+3. **Select "CLI Access Credentials"**: This will open the credentials management page
+4. **View Credential Files**: You'll see a list of current credential files for your active tenant
+5. **Generate New Credentials**: Click the button labeled **"Generate CLI Credential File"**
+6. **Download Credentials**: A `.simicsservice` text file will be downloaded with the following content:
+   ```ini
+   [auth]
+   client_id=your-client-id
+   client_secret=your-client-secret
+   auth_domain=https://auth-endpoint.example.com
    ```
 
-2. **Token Exchange**: HTTP Basic Auth to OAuth2 token endpoint
-   ```bash
-   curl -X POST $AUTH_DOMAIN \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -u "$CLIENT_ID:$CLIENT_SECRET" \
-     -d "grant_type=client_credentials&scope="
-   ```
+#### **Using Credentials in AI Chat**
 
-3. **API Authentication**: Bearer token for all ISS API requests
+When logging into the Workload Analyzer AI Chat interface:
+
+1. **Client ID**: Copy from the `client_id` field in your `.simicsservice` file
+2. **Client Secret**: Copy from the `client_secret` field in your `.simicsservice` file  
+3. **Auth Domain**: Copy from the `auth_domain` field in your `.simicsservice` file
+4. **Scope** (optional): Leave empty - scope is not required for this integration
+
+#### **Bearer Token Implementation**
+
+The application automatically exchanges your credentials for a bearer token and uses it for all ISS API calls:
+
+```bash
+# All API requests include the bearer token
+curl -X GET "https://api-test.workloadmgr.intel.com/v1/jobs" \
+  -H "Authorization: Bearer <your-bearer-token>"
+```
+
+The bearer token is:
+- Generated from your ISS CLI credentials (client_id and client_secret)
+- Passed through all requests to ISS API and file service
+- Managed by the auto-bedrock-chat-fastapi integration
+- Automatically included in the Authorization header
+
+**API Authentication**: Bearer token for all ISS API requests
    ```bash
    curl -H "Authorization: Bearer $ACCESS_TOKEN" $ISS_API_URL/v1/jobs
    ```

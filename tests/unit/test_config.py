@@ -323,7 +323,6 @@ class TestSettings:
         """Test that sensitive configuration is not exposed."""
         env_vars = {
             "AWS_SECRET_ACCESS_KEY": "super-secret-key",
-            "CLIENT_SECRET_NAME": "secret-credentials"
         }
         
         with patch.dict(os.environ, env_vars, clear=True):
@@ -334,7 +333,6 @@ class TestSettings:
             
             # Check that sensitive fields are present but marked appropriately
             assert "aws_secret_access_key" in settings_dict
-            assert "client_secret_name" in settings_dict
             
             # In a real scenario, you might want to ensure these are redacted in logs
             # This would depend on your logging configuration

@@ -18,7 +18,6 @@ from ..exceptions import (
 )
 from ..models.job_models import JobDetail, JobRequest, JobStatus, JobType, ISSJobsResponse
 from ..models.platform_models import Instance, Platform
-from .auth_service import AuthService, Credentials
 
 logger = logging.getLogger(__name__)
 
@@ -26,17 +25,16 @@ logger = logging.getLogger(__name__)
 class ISSClient:
     """Client for Intel Simulation Service API."""
 
-    def __init__(self, settings: Settings, auth_service: Optional[AuthService] = None):
+    def __init__(self, settings: Settings, bearer_token: str):
         """Initialize the ISS client.
 
         Args:
             settings: Application settings
-            auth_service: Authentication service instance
+            bearer_token: Bearer token for API authentication
         """
         self.settings = settings
-        self.auth_service = auth_service or AuthService(settings)
+        self.bearer_token = bearer_token
         self._session: Optional[aiohttp.ClientSession] = None
-        self._credentials: Optional[Credentials] = None
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -76,89 +74,16 @@ class ISSClient:
             await self._session.close()
             logger.debug("Closed aiohttp session")
 
-    async def _get_credentials(self) -> Credentials:
-        """Get or refresh credentials."""
-        if self._credentials is None:
-            self._credentials = await self.auth_service.get_iss_credentials()
-        return self._credentials
-
-    async def _get_oauth_token(self, credentials: Credentials) -> str:
-        """Get OAuth2 access token using client credentials.
+    def _get_auth_headers(self) -> Dict[str, str]:
+        """Get authentication headers with bearer token.
         
-        Args:
-            credentials: OAuth2 client credentials
-            
         Returns:
-            Access token
-            
-        Raises:
-            ISSClientError: If token exchange fails
+            Dictionary with Authorization header
         """
-        try:
-            token_url = self.settings.auth_domain
-            logger.info(f"Requesting OAuth2 token from: {token_url}")
-            
-            # Prepare OAuth2 client credentials request (matching working code)
-            token_data = {
-                "grant_type": "client_credentials",
-                "scope": ""
-            }
-            
-            headers = {
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            
-            # Use HTTP Basic Auth with client_id/client_secret (like the working code)
-            auth = aiohttp.BasicAuth(credentials.client_id, credentials.client_secret)
-            
-            # Use a shorter timeout for the OAuth request
-            timeout = aiohttp.ClientTimeout(total=10)
-
-            logger.debug(f"Making OAuth2 request for {token_url} with data: {token_data} and headers: {headers} using BasicAuth {auth}")
-
-            # Prepare proxy parameter if proxy is configured
-            proxy_param = self._proxy_url if hasattr(self, '_proxy_url') and self._proxy_url else None
-
-            async with self._session.post(
-                token_url,
-                data=token_data,
-                headers=headers,
-                auth=auth,
-                timeout=timeout,
-                proxy=proxy_param
-            ) as response:
-                response_text = await response.text()
-                logger.debug(f"OAuth2 response status: {response.status}")
-                
-                if response.status != 200:
-                    logger.error(f"OAuth2 token request failed: {response.status} - {response_text}")
-                    raise ISSClientError(f"OAuth2 token request failed: {response.status} - {response_text}")
-                
-                try:
-                    token_response = await response.json()
-                except Exception as json_error:
-                    logger.error(f"Failed to parse OAuth2 response as JSON: {json_error}")
-                    logger.error(f"Response text: {response_text}")
-                    raise ISSClientError(f"Invalid OAuth2 response format: {json_error}")
-                
-                access_token = token_response.get("access_token")
-                
-                if not access_token:
-                    logger.error(f"No access_token in OAuth2 response: {token_response}")
-                    raise ISSClientError("No access_token in OAuth2 response")
-                
-                logger.debug(f"Successfully obtained OAuth2 access token: {access_token[:20]}...")
-                return access_token
-                
-        except asyncio.TimeoutError:
-            logger.error(f"OAuth2 request timed out to {token_url}")
-            raise ISSClientError(f"OAuth2 request timed out to {token_url}")
-        except aiohttp.ClientError as e:
-            logger.error(f"OAuth2 client error: {e}")
-            raise ISSClientError(f"OAuth2 client error: {e}")
-        except Exception as e:
-            logger.error(f"Failed to get OAuth2 token: {e}")
-            raise ISSClientError(f"OAuth2 authentication failed: {e}")
+        return {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Accept": "application/json",
+        }
 
     def _build_url(self, endpoint: str) -> str:
         """Build full URL for ISS API endpoint.
@@ -179,7 +104,6 @@ class ISSClient:
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
         json_data: Optional[Dict[str, Any]] = None,
-        retry_auth: bool = True,
     ) -> Dict[str, Any]:
         """Make authenticated request to ISS API.
 
@@ -188,7 +112,6 @@ class ISSClient:
             endpoint: API endpoint
             params: Query parameters
             json_data: JSON body data
-            retry_auth: Retry on auth failure
 
         Returns:
             Response data
@@ -197,21 +120,11 @@ class ISSClient:
             ISSClientError: On request failure
         """
         await self._ensure_session()
-        credentials = await self._get_credentials()
 
         url = self._build_url(endpoint)
         
-        # Use OAuth2 Bearer token if we have client credentials, otherwise Basic Auth
-        headers = {"Accept": "application/json"}
-        if credentials.client_id and credentials.client_secret:
-            # OAuth2 flow - get bearer token
-            token = await self._get_oauth_token(credentials)
-            headers["Authorization"] = f"Bearer {token}"
-        elif credentials.username and credentials.password:
-            # Basic Auth flow
-            auth = aiohttp.BasicAuth(credentials.username, credentials.password)
-        else:
-            raise ISSClientError("No valid authentication credentials available")
+        # Use bearer token for authentication
+        headers = self._get_auth_headers()
 
         if json_data:
             headers["Content-Type"] = "application/json"
@@ -231,25 +144,12 @@ class ISSClient:
             # Add proxy if configured
             if hasattr(self, '_proxy_url') and self._proxy_url:
                 request_kwargs["proxy"] = self._proxy_url
-            
-            # Add auth only for Basic Auth (Bearer token is in headers)
-            if credentials.username and credentials.password:
-                request_kwargs["auth"] = auth
 
             async with self._session.request(**request_kwargs) as response:
 
                 # Handle different response status codes
                 if response.status == 401:
-                    if retry_auth:
-                        logger.warning("Authentication failed, refreshing credentials")
-                        self._credentials = None
-                        return await self._request(
-                            method, endpoint, params, json_data, False
-                        )
-                    else:
-                        raise ISSAuthenticationError(
-                            "Authentication failed after retry"
-                        )
+                    raise ISSAuthenticationError("Authentication failed")
 
                 elif response.status == 404:
                     raise ISSNotFoundError(f"Resource not found: {endpoint}")

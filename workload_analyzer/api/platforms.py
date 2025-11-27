@@ -17,18 +17,11 @@ from ..models.response_models import (
     PlatformListResponse,
 )
 from ..services.iss_client import ISSClient
+from .dependencies import get_bearer_token, get_iss_client
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/platforms", tags=["platforms"])
-
-
-async def get_iss_client(settings: Settings = Depends(get_settings)) -> ISSClient:
-    """Dependency to get ISS client."""
-    from ..services.auth_service import AuthService
-
-    auth_service = AuthService(settings)
-    return ISSClient(settings, auth_service)
 
 
 @router.get(

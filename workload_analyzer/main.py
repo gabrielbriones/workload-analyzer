@@ -71,22 +71,6 @@ async def lifespan(app: FastAPI):
         if not settings.aws_region:
             raise ConfigurationError("AWS_REGION is required")
 
-        # Test ISS connectivity (optional, non-blocking)
-        try:
-            from .services.auth_service import AuthService
-            from .services.iss_client import ISSClient
-
-            auth_service = AuthService(settings)
-            async with ISSClient(settings, auth_service) as iss_client:
-                # Test basic connectivity
-                await iss_client.get_platforms({})
-
-            logger.info("ISS connectivity verified")
-
-        except Exception as e:
-            logger.warning(f"ISS connectivity test failed: {e}")
-            raise e
-
         logger.info("Application startup completed successfully")
 
     except Exception as e:
@@ -418,7 +402,10 @@ def setup_ai_integration(app: FastAPI, settings: Settings) -> None:
             ui_title=settings.bedrock_ui_title,
             ui_welcome_message=settings.bedrock_ui_welcome_message,
             # All other settings (model_id, temperature, endpoints, etc.) come from .env
-            enable_tool_auth=False,
+            enable_tool_auth=True,
+            supported_auth_types=[
+                "oauth2_client_credentials",
+            ],
         )
 
         logger.info("Auto-bedrock-chat integration configured successfully")

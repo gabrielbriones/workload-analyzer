@@ -18,19 +18,18 @@ logger = logging.getLogger(__name__)
 class FileService:
     """Service for accessing files from ISS file service."""
 
-    def __init__(self, settings: Settings, auth_service=None, iss_client=None):
+    def __init__(self, settings: Settings, bearer_token: str, iss_client=None):
         """Initialize the file service.
 
         Args:
             settings: Application settings
-            auth_service: Authentication service for OAuth2 tokens
+            bearer_token: Bearer token for API authentication
             iss_client: Optional ISS client for job type lookup
         """
         self.settings = settings
-        self.auth_service = auth_service
+        self.bearer_token = bearer_token
         self.iss_client = iss_client
         self._session: Optional[aiohttp.ClientSession] = None
-        self._access_token: Optional[str] = None
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -72,63 +71,16 @@ class FileService:
             await self._session.close()
             logger.debug("Closed file service session")
 
-    async def _get_access_token(self) -> str:
-        """Get OAuth2 access token for file service authentication.
+    def _get_auth_headers(self) -> dict:
+        """Get authentication headers with bearer token.
         
         Returns:
-            Access token for authentication
-            
-        Raises:
-            FileServiceError: If authentication fails
+            Dictionary with Authorization header
         """
-        if not self.auth_service:
-            raise FileServiceError("Authentication service not provided")
-            
-        try:
-            # Get OAuth2 credentials from auth service
-            credentials = await self.auth_service.get_iss_credentials()
-            
-            # Prepare OAuth2 token request
-            token_url = self.settings.auth_domain
-            token_data = {
-                "grant_type": "client_credentials",
-                "scope": ""
-            }
-            
-            headers = {
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            
-            # Use HTTP Basic Auth with client_id/client_secret
-            auth = aiohttp.BasicAuth(credentials.client_id, credentials.client_secret)
-            
-            # Prepare proxy parameter if proxy is configured
-            proxy_param = self._proxy_url if hasattr(self, '_proxy_url') and self._proxy_url else None
-            
-            async with self._session.post(
-                token_url,
-                data=token_data,
-                headers=headers,
-                auth=auth,
-                proxy=proxy_param
-            ) as response:
-                if response.status != 200:
-                    response_text = await response.text()
-                    logger.error(f"OAuth2 token request failed: {response.status} - {response_text}")
-                    raise FileServiceError(f"OAuth2 authentication failed: {response.status}")
-                
-                token_response = await response.json()
-                access_token = token_response.get("access_token")
-                
-                if not access_token:
-                    raise FileServiceError("No access token in OAuth2 response")
-                
-                logger.debug("Successfully obtained OAuth2 access token for file service")
-                return access_token
-                
-        except Exception as e:
-            logger.error(f"Failed to get OAuth2 token for file service: {e}")
-            raise FileServiceError(f"Authentication failed: {e}")
+        return {
+            "Authorization": f"Bearer {self.bearer_token}",
+            "Accept": "application/json",
+        }
 
     def _get_file_service_url(self, tenant: str) -> str:
         """Get file service URL for specified tenant.
@@ -219,12 +171,8 @@ class FileService:
         try:
             logger.debug(f"Making {method} request to {url}")
 
-            # Get OAuth2 access token if auth service is available
-            headers = {}
-            if self.auth_service:
-                if not self._access_token:
-                    self._access_token = await self._get_access_token()
-                headers["Authorization"] = f"Bearer {self._access_token}"
+            # Get authorization headers
+            headers = self._get_auth_headers()
 
             # Prepare proxy parameter if proxy is configured
             proxy_param = self._proxy_url if hasattr(self, '_proxy_url') and self._proxy_url else None
@@ -232,17 +180,6 @@ class FileService:
             response = await self._session.request(
                 method=method, url=url, params=params, headers=headers, proxy=proxy_param
             )
-
-            if response.status == 401 and self.auth_service:
-                # Token might be expired, refresh and retry once
-                logger.warning("Authentication failed, refreshing access token")
-                self._access_token = await self._get_access_token()
-                headers["Authorization"] = f"Bearer {self._access_token}"
-                
-                # Retry the request with new token
-                response = await self._session.request(
-                    method=method, url=url, params=params, headers=headers, proxy=proxy_param
-                )
                 
             if response.status == 404:
                 raise FileNotFoundError(f"File not found: {path}")

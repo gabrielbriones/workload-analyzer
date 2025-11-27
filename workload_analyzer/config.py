@@ -40,24 +40,8 @@ class Settings(BaseSettings):
     iss_environment: str = Field(
         default="test", env="ISS_ENVIRONMENT", description="ISS environment (dev, test, prod) for URL construction"
     )
-    iss_secret_name: str = Field(
-        default="workload-analyzer/iss-credentials", env="ISS_SECRET_NAME"
-    )
-    auth_domain: str = Field(default="your-auth-domain.intel.com", env="AUTH_DOMAIN")
     iss_timeout_seconds: int = Field(default=30, env="ISS_TIMEOUT_SECONDS")
     file_service_timeout_seconds: int = Field(default=30, env="FILE_SERVICE_TIMEOUT_SECONDS")
-
-    # AWS Configuration for ISS
-    client_secret_name: str = Field(
-        default="iss/workload-analyzer/credentials", env="CLIENT_SECRET_NAME"
-    )
-    aws_access_key_id_iss: Optional[str] = Field(
-        default=None, env="AWS_ACCESS_KEY_ID_ISS"
-    )
-    aws_secret_access_key_iss: Optional[str] = Field(
-        default=None, env="AWS_SECRET_ACCESS_KEY_ISS"
-    )
-    aws_region_iss: str = Field(default="us-west-2", env="AWS_REGION_ISS")
 
     # AWS Configuration for Bedrock
     aws_access_key_id: Optional[str] = Field(default=None, env="AWS_ACCESS_KEY_ID")
@@ -151,40 +135,6 @@ class Settings(BaseSettings):
     dev_mode: bool = Field(default=True, env="DEV_MODE")
     mock_iss_api: bool = Field(default=False, env="MOCK_ISS_API")
     maintenance_mode: bool = Field(default=False, env="MAINTENANCE_MODE")
-
-    @field_validator("aws_access_key_id_iss", mode="before")
-    @classmethod
-    def default_iss_access_key(cls, v):
-        """Default ISS access key to main AWS access key if not set."""
-        import os
-        
-        # If explicitly set via environment variable, use that
-        if v is not None:
-            return v
-            
-        # Otherwise, try to get the main AWS access key
-        main_aws_key = os.getenv("AWS_ACCESS_KEY_ID")
-        if main_aws_key:
-            return main_aws_key
-            
-        return None
-
-    @field_validator("aws_secret_access_key_iss", mode="before")
-    @classmethod
-    def default_iss_secret_key(cls, v):
-        """Default ISS secret key to main AWS secret key if not set."""
-        import os
-        
-        # If explicitly set via environment variable, use that
-        if v is not None:
-            return v
-            
-        # Otherwise, try to get the main AWS secret key
-        main_aws_secret = os.getenv("AWS_SECRET_ACCESS_KEY")
-        if main_aws_secret:
-            return main_aws_secret
-            
-        return None
 
     @field_validator("bedrock_allowed_paths", mode="before")
     @classmethod

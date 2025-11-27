@@ -15,22 +15,19 @@ class TestJobsAPIIntegration:
         """Create test client."""
         return TestClient(app)
     
-    @patch('workload_analyzer.services.auth_service.AuthService.get_iss_credentials')
+    @pytest.fixture
+    def auth_header(self):
+        """Create authorization header with bearer token."""
+        return {"Authorization": "Bearer test-token-12345"}
+    
     @patch('workload_analyzer.services.iss_client.ISSClient.get_jobs')
-    def test_jobs_api_integration(self, mock_get_jobs, mock_get_credentials, client, sample_iss_jobs_response):
+    def test_jobs_api_integration(self, mock_get_jobs, client, auth_header, sample_iss_jobs_response):
         """Test jobs API integration."""
-        # Mock authentication
-        from workload_analyzer.services.auth_service import Credentials
-        mock_get_credentials.return_value = Credentials(
-            client_id="test_client",
-            client_secret="test_secret"
-        )
-        
         # Mock ISS client response
         mock_get_jobs.return_value = sample_iss_jobs_response
         
-        # Make API request
-        response = client.get("/api/v1/jobs")
+        # Make API request with bearer token
+        response = client.get("/api/v1/jobs", headers=auth_header)
         
         # Verify response
         assert response.status_code == 200
@@ -42,23 +39,15 @@ class TestJobsAPIIntegration:
         # Verify ISS client was called
         mock_get_jobs.assert_called_once()
     
-    @patch('workload_analyzer.services.auth_service.AuthService.get_iss_credentials')
     @patch('workload_analyzer.services.iss_client.ISSClient.get_job')
-    def test_job_detail_api_integration(self, mock_get_job, mock_get_credentials, client, sample_job_detail):
+    def test_job_detail_api_integration(self, mock_get_job, client, auth_header, sample_job_detail):
         """Test job detail API integration.""" 
-        # Mock authentication
-        from workload_analyzer.services.auth_service import Credentials
-        mock_get_credentials.return_value = Credentials(
-            client_id="test_client",
-            client_secret="test_secret"
-        )
-        
         # Mock ISS client response
         mock_get_job.return_value = sample_job_detail
         
-        # Make API request
+        # Make API request with bearer token
         job_id = "caef4de5-00e2-4483-b23c-b4bd3bbb5876"
-        response = client.get(f"/api/v1/jobs/{job_id}")
+        response = client.get(f"/api/v1/jobs/{job_id}", headers=auth_header)
         
         # Verify response
         assert response.status_code == 200
@@ -70,27 +59,19 @@ class TestJobsAPIIntegration:
         # Verify ISS client was called with correct job ID
         mock_get_job.assert_called_once_with(job_id)
     
-    @patch('workload_analyzer.services.auth_service.AuthService.get_iss_credentials')
     @patch('workload_analyzer.services.iss_client.ISSClient.get_job')
     @patch('workload_analyzer.services.file_service.FileService.list_files')
-    def test_file_listing_api_integration(self, mock_list_files, mock_get_job, mock_get_credentials, client, sample_file_list, sample_job_detail):
+    def test_file_listing_api_integration(self, mock_list_files, mock_get_job, client, auth_header, sample_file_list, sample_job_detail):
         """Test file listing API integration."""
-        # Mock authentication
-        from workload_analyzer.services.auth_service import Credentials
-        mock_get_credentials.return_value = Credentials(
-            client_id="test_client",
-            client_secret="test_secret"
-        )
-        
         # Mock ISS client response to return job with tenant_id
         mock_get_job.return_value = sample_job_detail
         
         # Mock file service response
         mock_list_files.return_value = sample_file_list
         
-        # Make API request
+        # Make API request with bearer token
         job_id = "caef4de5-00e2-4483-b23c-b4bd3bbb5876"
-        response = client.get(f"/api/v1/jobs/{job_id}/files")
+        response = client.get(f"/api/v1/jobs/{job_id}/files", headers=auth_header)
         
         # Verify response
         assert response.status_code == 200
@@ -173,13 +154,21 @@ class TestErrorHandlingIntegration:
         # Mock authentication failure in ISS client
         mock_get_jobs.side_effect = ISSAuthenticationError("Authentication failed")
         
-        response = client.get("/api/v1/jobs")
+        auth_header = {"Authorization": "Bearer test-token-12345"}
+        response = client.get("/api/v1/jobs", headers=auth_header)
         assert response.status_code == 401
+    
+    def test_missing_auth_header_integration(self, client):
+        """Test missing authorization header."""
+        # Request without Authorization header should return 422 (validation error)
+        response = client.get("/api/v1/jobs")
+        assert response.status_code == 422
     
     def test_validation_error_integration(self, client):
         """Test validation error handling."""
+        auth_header = {"Authorization": "Bearer test-token-12345"}
         # Test invalid query parameters
-        response = client.get("/api/v1/jobs?limit=0")
+        response = client.get("/api/v1/jobs?limit=0", headers=auth_header)
         assert response.status_code == 422
         
         response = client.get("/api/v1/jobs?job_type=INVALID")
