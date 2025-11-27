@@ -197,8 +197,9 @@ async def list_job_files(
     """List files for a specific job."""
     logger.info(f"📁 Listing files for job: {job_id}")
     try:
-        # Keep ISS client open for the entire operation to support connection pooling
-        # and because the ISS client is needed to obtain the tenant_id for file_service (file_service does not query ISS here)
+        # Keep ISS client open for the entire operation to obtain the tenant_id.
+        # The ISS client connection is kept alive during file_service operations
+        # for consistency and potential future enhancements to connection pooling.
         async with iss_client:
             job = await iss_client.get_job(job_id)
             
@@ -240,8 +241,10 @@ async def download_job_file(
     """Download a file from a job."""
     logger.info(f"⬇️ Downloading file: {filename} from job: {job_id}")
     try:
-        # Keep ISS client open for the entire operation to support connection pooling
-        # and avoid redundant connection setup if file_service needs to query ISS
+        # Keep ISS client open for the entire operation to obtain the tenant_id.
+        # The ISS client connection is kept alive during file_service operations
+        # to support connection pooling and in case file_service needs to query ISS
+        # (e.g., in get_artifact_type() for determining job classification).
         async with iss_client:
             job = await iss_client.get_job(job_id)
             
