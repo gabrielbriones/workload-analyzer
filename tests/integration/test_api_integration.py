@@ -194,7 +194,7 @@ class TestConfigurationIntegration:
         assert hasattr(settings, 'bedrock_model_id')
         
         # Test that URLs are valid format
-        assert settings.iss_api_url.startswith('http')
+        assert settings.get_iss_url().startswith('http')
         
         # Test that Bedrock settings are configured
         assert settings.bedrock_model_id is not None

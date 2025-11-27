@@ -151,8 +151,8 @@ class TestISSClient:
             # Check method and URL
             # The request method uses keyword arguments, not positional
             assert call_args.kwargs['method'] == 'GET'
-            # The URL is built using iss_api_url + /v1/ + endpoint
-            expected_url = f"{mock_settings.iss_api_url}/v1/jobs"
+            # The URL is built using get_iss_url() + /v1/ + endpoint
+            expected_url = f"{mock_settings.get_iss_url()}/v1/jobs"
             assert call_args.kwargs['url'] == expected_url
             
             # Check parameters
@@ -199,8 +199,8 @@ class TestISSClient:
             # Verify the request was made to the correct endpoint
             mock_request.assert_called_once()
             call_args = mock_request.call_args
-            # The URL is built using iss_api_url + /v1/ + endpoint
-            expected_url = f"{mock_settings.iss_api_url}/v1/jobs/job/{job_id}"
+            # The URL is built using get_iss_url() + /v1/ + endpoint
+            expected_url = f"{mock_settings.get_iss_url()}/v1/jobs/job/{job_id}"
             assert call_args.kwargs['url'] == expected_url
             
             assert result.job_id == sample_job_data.job_id

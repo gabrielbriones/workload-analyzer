@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
         settings = get_settings()
 
         # Validate critical configuration
-        if not settings.iss_api_url:
+        if not settings.get_iss_url():
             raise ConfigurationError("ISS_API_URL is required")
 
         if not settings.aws_region:
@@ -353,7 +353,6 @@ def setup_routers(app: FastAPI) -> None:
         # Check service connectivity
         iss_status = "unknown"
         bedrock_status = "unknown"
-        file_service_status = "unknown"
 
         try:
             # Quick ISS connectivity check
@@ -367,11 +366,6 @@ def setup_routers(app: FastAPI) -> None:
 
         except Exception:
             iss_status = "unhealthy"
-
-        # File service status (simplified)
-        file_service_status = (
-            "healthy" if settings.iss_file_service_url else "not_configured"
-        )
 
         # Bedrock status (simplified)
         bedrock_status = "healthy" if settings.bedrock_model_id else "not_configured"
@@ -391,7 +385,6 @@ def setup_routers(app: FastAPI) -> None:
             version="1.0.0",
             iss_api_status=iss_status,
             bedrock_status=bedrock_status,
-            file_service_status=file_service_status,
             memory_usage_mb=memory_usage,
         )
 
@@ -423,8 +416,9 @@ def setup_ai_integration(app: FastAPI, settings: Settings) -> None:
             excluded_paths=settings.bedrock_excluded_paths,
             # UI Configuration
             ui_title=settings.bedrock_ui_title,
-            ui_welcome_message=settings.bedrock_ui_welcome_message
+            ui_welcome_message=settings.bedrock_ui_welcome_message,
             # All other settings (model_id, temperature, endpoints, etc.) come from .env
+            enable_tool_auth=False,
         )
 
         logger.info("Auto-bedrock-chat integration configured successfully")

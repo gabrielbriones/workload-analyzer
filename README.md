@@ -223,10 +223,9 @@ The project uses a comprehensive JSON schema (`schema_jobs.json`) that defines:
    Or set environment variables directly:
    ```bash
    # ISS API configuration
-   export ISS_API_URL="https://gw-extval-test.workloadmgr.intel.com"
+   export ISS_ENVIRONMENT="test"  # dev or test for dynamic URL construction
    export AUTH_DOMAIN="https://cognito-idp.us-west-2.amazonaws.com/your-pool/oauth2/token"
    export CLIENT_SECRET_NAME="test/cognito/client_creds/services-backend"
-   export TENANT_ID="your-tenant-id"
    
    # AWS credentials for ISS authentication
    export AWS_ACCESS_KEY_ID="your-aws-key"
@@ -582,15 +581,20 @@ file_content = response.json()["file_content"]
 async def advanced_usage():
     settings = get_settings()
     auth_service = AuthService(settings)
-    file_service = FileService(settings, auth_service)
+    iss_client = ISSClient(settings, auth_service)
+    file_service = FileService(settings, auth_service, iss_client)
+    
+    async with iss_client:
+        # Get job details which includes tenant_id
+        job = await iss_client.get_job(job_id)
     
     async with file_service:
-        # List files
-        files = await file_service.list_files(settings.tenant_id, job_id)
+        # List files using tenant from job
+        files = await file_service.list_files(job.tenant_id, job_id)
         print(f"Found {len(files)} files")
         
         # Download file as bytes
-        content = await file_service.download_file(settings.tenant_id, job_id, "sim.out")
+        content = await file_service.download_file(job.tenant_id, job_id, "sim.out")
         print(f"Downloaded {len(content)} bytes")
 
 asyncio.run(advanced_usage())
@@ -604,10 +608,10 @@ The application uses OAuth2 client credentials flow with AWS Secrets Manager for
 ```python
 # Key configuration settings
 class Settings(BaseSettings):
-    # ISS API endpoints
-    iss_api_url: str = "https://api-test.workloadmgr.intel.com"
+    # ISS API endpoints - dynamically constructed from environment
+    iss_api_url: str = "https://api-test.workloadmgr.intel.com"  # Can override for custom URLs
+    iss_environment: str = "test"  # Used to construct URL: https://api-{environment}.workloadmgr.intel.com
     auth_domain: str  # OAuth2 token endpoint
-    tenant_id: str
     
     # AWS Secrets Manager
     client_secret_name: str
@@ -628,6 +632,15 @@ class Settings(BaseSettings):
     # Proxy configuration (optional)
     def get_proxy_settings(self) -> Optional[str]:
         return os.getenv('HTTPS_PROXY') or os.getenv('https_proxy')
+    
+    # URL construction methods
+    def get_iss_url(self) -> str:
+        """Get ISS API URL (override or dynamic from ISS_ENVIRONMENT)"""
+        # Returns https://api-{environment}.workloadmgr.intel.com unless overridden
+    
+    def get_file_service_url(self, tenant: str) -> str:
+        """Get file service URL for tenant"""
+        # Returns https://gw-{tenant}-test.workloadmgr.intel.com
 ```
 
 ### Authentication Flow
@@ -666,6 +679,39 @@ class FileService:
         proxy_url = os.getenv('HTTPS_PROXY') or os.getenv('https_proxy')
         if proxy_url:
             self._session = aiohttp.ClientSession(proxy=proxy_url)
+```
+
+### Multi-Tenant Configuration
+The application uses a dynamic multi-tenant architecture where tenant information is derived from ISS job objects:
+
+**Key Changes:**
+- **No hardcoded TENANT_ID**: Tenant information comes from the `job.tenant_id` field returned by ISS API
+- **Dynamic URL Construction**: 
+  - ISS API: `https://api-{ISS_ENVIRONMENT}.workloadmgr.intel.com` (configurable via `ISS_ENVIRONMENT`)
+  - File Service: `https://gw-{tenant_id}-test.workloadmgr.intel.com` (constructed per job)
+- **Per-Job Tenant Routing**: File operations automatically route to the correct tenant based on job metadata
+
+**Configuration:**
+```bash
+# ISS environment for API URL construction (test, staging, prod)
+export ISS_ENVIRONMENT="test"
+
+# Optional: Override ISS_API_URL for custom endpoints
+export ISS_API_URL="https://custom-iss.company.com"
+
+# Optional: Custom file service URLs for specific tenants
+export FILE_SERVICE_TENANT_URLS='{"custom-tenant": "https://custom-fs.company.com"}'
+```
+
+**Usage Example:**
+```python
+# Tenant info is automatically obtained from job
+async with iss_client:
+    job = await iss_client.get_job(job_id)  # Contains tenant_id field
+
+async with file_service:
+    # Automatically uses job.tenant_id for routing
+    files = await file_service.list_files(job.tenant_id, job_id)
 ```
 
 ### Error Handling

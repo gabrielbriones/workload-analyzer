@@ -192,14 +192,17 @@ async def get_job(
 async def list_job_files(
     job_id: str,
     file_service: FileService = Depends(get_file_service),
-    settings: Settings = Depends(get_settings),
+    iss_client: ISSClient = Depends(get_iss_client),
 ):
     """List files for a specific job."""
     logger.info(f"📁 Listing files for job: {job_id}")
     try:
+        async with iss_client:
+            job = await iss_client.get_job(job_id)
+        
         async with file_service:
             files = await file_service.list_files(
-                tenant=settings.tenant_id, job_id=job_id, path=""
+                tenant=job.tenant_id, job_id=job_id, path=""
             )
 
         return FileListResponse(
@@ -230,15 +233,18 @@ async def download_job_file(
     job_id: str,
     filename: str,
     file_service: FileService = Depends(get_file_service),
-    settings: Settings = Depends(get_settings),
+    iss_client: ISSClient = Depends(get_iss_client),
 ):
     """Download a file from a job."""
     logger.info(f"⬇️ Downloading file: {filename} from job: {job_id}")
     try:
+        async with iss_client:
+            job = await iss_client.get_job(job_id)
+        
         async with file_service:
             # Generate download URL (redirect to file service)
             response = await file_service.download_file(
-                tenant=settings.tenant_id,
+                tenant=job.tenant_id,
                 job_id=job_id,
                 file_path=filename,
             )

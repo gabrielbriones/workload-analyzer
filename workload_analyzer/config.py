@@ -37,16 +37,13 @@ class Settings(BaseSettings):
     iss_api_url: str = Field(
         default="https://api-test.workloadmgr.intel.com", env="ISS_API_URL"
     )
-    iss_file_service_url: str = Field(
-        default="https://gw-extval-test.workloadmgr.intel.com",
-        env="ISS_FILE_SERVICE_URL",
+    iss_environment: str = Field(
+        default="test", env="ISS_ENVIRONMENT", description="ISS environment (dev, test, prod) for URL construction"
     )
     iss_secret_name: str = Field(
         default="workload-analyzer/iss-credentials", env="ISS_SECRET_NAME"
     )
     auth_domain: str = Field(default="your-auth-domain.intel.com", env="AUTH_DOMAIN")
-    tenant_id: str = Field(default="extval", env="TENANT_ID")
-    default_tenant: Optional[str] = Field(default=None, env="DEFAULT_TENANT")
     iss_timeout_seconds: int = Field(default=30, env="ISS_TIMEOUT_SECONDS")
     file_service_timeout_seconds: int = Field(default=30, env="FILE_SERVICE_TIMEOUT_SECONDS")
 
@@ -154,14 +151,6 @@ class Settings(BaseSettings):
     dev_mode: bool = Field(default=True, env="DEV_MODE")
     mock_iss_api: bool = Field(default=False, env="MOCK_ISS_API")
     maintenance_mode: bool = Field(default=False, env="MAINTENANCE_MODE")
-
-    @field_validator("iss_file_service_url", mode="before")
-    @classmethod
-    def validate_file_service_url(cls, v):
-        """Build file service URL based on tenant_id if not explicitly set."""
-        # Note: In Pydantic v2, we can't access other field values in before mode
-        # This validation is simplified for now
-        return v
 
     @field_validator("aws_access_key_id_iss", mode="before")
     @classmethod
@@ -286,27 +275,41 @@ class Settings(BaseSettings):
         """Check if the application is running in development mode."""
         return self.app_env.lower() in ["development", "dev", "test"]
 
-    def get_file_service_url(self, tenant: str = None) -> str:
+    def get_file_service_url(self, tenant: str) -> str:
         """Get file service URL for specified tenant.
 
         Args:
-            tenant: Tenant identifier (optional, uses default if not provided)
+            tenant: Tenant identifier (required)
 
         Returns:
             File service base URL for the tenant
         """
-        effective_tenant = tenant or self.get_effective_tenant()
-        
         # Check if there's a specific URL for this tenant
-        if effective_tenant in self.file_service_tenant_urls:
-            return self.file_service_tenant_urls[effective_tenant]
+        if tenant in self.file_service_tenant_urls:
+            return self.file_service_tenant_urls[tenant]
         
-        # Otherwise use the default ISS file service URL
-        return self.iss_file_service_url
+        if self.iss_environment == 'prod':
+            return f"https://gw-{tenant}.simicsservice.intel.com"
+        
+        # Otherwise dynamically construct the file service URL based on tenant
+        return f"https://gw-{tenant}-{self.iss_environment}.workloadmgr.intel.com"
 
-    def get_effective_tenant(self) -> str:
-        """Get the effective tenant ID (default_tenant or tenant_id)."""
-        return self.default_tenant or self.tenant_id
+    def get_iss_url(self) -> str:
+        """Get ISS API URL, either from override or dynamically constructed from environment.
+
+        Returns:
+            ISS API base URL
+        """
+        # If ISS_API_URL is explicitly set to a custom value, use it
+        # Check if it differs from the default pattern
+        if self.iss_api_url and not self.iss_api_url.startswith("https://api-"):
+            return self.iss_api_url
+        
+        if self.iss_environment == 'prod':
+            return "https://api.simicsservice.intel.com"
+        
+        # Otherwise dynamically construct the ISS URL based on environment
+        return f"https://api-{self.iss_environment}.workloadmgr.intel.com"
 
     def get_bedrock_system_prompt(self) -> str:
         """Get the effective system prompt for Bedrock AI."""
@@ -316,12 +319,11 @@ class Settings(BaseSettings):
         return f"""You are an expert Intel simulation workload analyst. 
 Help users optimize their IWPS, ISIM, and Coho simulation jobs. 
 You have read-only access to Intel Simulation Service (ISS) APIs and file services. 
-Job IDs are UUIDs with 'a' prefix (e.g., a2290337-a3d4-40db-904d-79222997688f). 
+Job IDs are UUIDs (e.g., 2290337-a3d4-40db-904d-79222997688f). 
 Focus on performance analysis, configuration guidance, and troubleshooting. 
 Always explain your reasoning and cite specific data when available.
 
 Current configuration:
-- Tenant: {self.get_effective_tenant()}
 - Default Platform: {self.default_platform}
 - Model: {self.bedrock_model_id}
 """
