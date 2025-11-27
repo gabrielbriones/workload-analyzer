@@ -71,8 +71,9 @@ class TestJobsAPIIntegration:
         mock_get_job.assert_called_once_with(job_id)
     
     @patch('workload_analyzer.services.auth_service.AuthService.get_iss_credentials')
+    @patch('workload_analyzer.services.iss_client.ISSClient.get_job')
     @patch('workload_analyzer.services.file_service.FileService.list_files')
-    def test_file_listing_api_integration(self, mock_list_files, mock_get_credentials, client, sample_file_list):
+    def test_file_listing_api_integration(self, mock_list_files, mock_get_job, mock_get_credentials, client, sample_file_list, sample_job_detail):
         """Test file listing API integration."""
         # Mock authentication
         from workload_analyzer.services.auth_service import Credentials
@@ -80,6 +81,9 @@ class TestJobsAPIIntegration:
             client_id="test_client",
             client_secret="test_secret"
         )
+        
+        # Mock ISS client response to return job with tenant_id
+        mock_get_job.return_value = sample_job_detail
         
         # Mock file service response
         mock_list_files.return_value = sample_file_list
@@ -96,6 +100,9 @@ class TestJobsAPIIntegration:
         assert "job_id" in data
         assert data["job_id"] == job_id
         assert len(data["files"]) == len(sample_file_list)
+        
+        # Verify ISS client was called to get job
+        mock_get_job.assert_called_once_with(job_id)
     
     def test_health_endpoint_integration(self, client):
         """Test health endpoint integration."""
@@ -194,7 +201,7 @@ class TestConfigurationIntegration:
         assert hasattr(settings, 'bedrock_model_id')
         
         # Test that URLs are valid format
-        assert settings.iss_api_url.startswith('http')
+        assert settings.get_iss_url().startswith('http')
         
         # Test that Bedrock settings are configured
         assert settings.bedrock_model_id is not None

@@ -192,15 +192,21 @@ async def get_job(
 async def list_job_files(
     job_id: str,
     file_service: FileService = Depends(get_file_service),
-    settings: Settings = Depends(get_settings),
+    iss_client: ISSClient = Depends(get_iss_client),
 ):
     """List files for a specific job."""
     logger.info(f"📁 Listing files for job: {job_id}")
     try:
-        async with file_service:
-            files = await file_service.list_files(
-                tenant=settings.tenant_id, job_id=job_id, path=""
-            )
+        # Keep ISS client open for the entire operation to obtain the tenant_id.
+        # The ISS client connection is kept alive during file_service operations
+        # for consistency and potential future enhancements to connection pooling.
+        async with iss_client:
+            job = await iss_client.get_job(job_id)
+            
+            async with file_service:
+                files = await file_service.list_files(
+                    tenant=job.tenant_id, job_id=job_id, path=""
+                )
 
         return FileListResponse(
             files=files,
@@ -230,26 +236,33 @@ async def download_job_file(
     job_id: str,
     filename: str,
     file_service: FileService = Depends(get_file_service),
-    settings: Settings = Depends(get_settings),
+    iss_client: ISSClient = Depends(get_iss_client),
 ):
     """Download a file from a job."""
     logger.info(f"⬇️ Downloading file: {filename} from job: {job_id}")
     try:
-        async with file_service:
-            # Generate download URL (redirect to file service)
-            response = await file_service.download_file(
-                tenant=settings.tenant_id,
-                job_id=job_id,
-                file_path=filename,
-            )
-
-            if type(response) == bytes:
-                response = {"file_content": response.decode('utf-8')}
+        # Keep ISS client open for the entire operation to obtain the tenant_id.
+        # The ISS client connection is kept alive during file_service operations
+        # to support connection pooling and in case file_service needs to query ISS
+        # (e.g., in get_artifact_type() for determining job classification).
+        async with iss_client:
+            job = await iss_client.get_job(job_id)
             
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content=response,
-            )
+            async with file_service:
+                # Generate download URL (redirect to file service)
+                response = await file_service.download_file(
+                    tenant=job.tenant_id,
+                    job_id=job_id,
+                    file_path=filename,
+                )
+
+                if type(response) == bytes:
+                    response = {"file_content": response.decode('utf-8')}
+                
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content=response,
+                )
 
     except FileServiceError as e:
         logger.error(

@@ -1,13 +1,19 @@
 """Test configuration and fixtures."""
 
 import asyncio
+import logging
 import pytest
+import warnings
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+
+# Suppress logging errors that occur during test teardown from third-party libraries
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+logging.getLogger("auto_bedrock_chat_fastapi").setLevel(logging.CRITICAL)
 
 from workload_analyzer.main import app
 from workload_analyzer.config import Settings
@@ -21,9 +27,8 @@ def mock_settings() -> Settings:
     return Settings(
         # ISS API Configuration
         iss_api_url="https://api-test.workloadmgr.intel.com",
-        iss_file_service_url="https://gw-test-test.workloadmgr.intel.com", 
+        iss_environment="test",
         auth_domain="https://azad.auth.us-west-2.amazoncognito.com/oauth2/token",
-        tenant_id="test",
         client_secret_name="test/cognito/client_creds/services-backend",
         
         # AWS Configuration
@@ -189,7 +194,8 @@ def sample_job_detail() -> JobDetail:
         RequestedOn=datetime.utcnow().isoformat(),
         LastUpdatedOn=datetime.utcnow().isoformat(),
         actual_runtime_minutes=45.5,
-        exit_code=0
+        exit_code=0,
+        tenant_id="test-tenant"  # Tenant ID for multi-tenant support
     )
 
 
@@ -280,6 +286,14 @@ def sample_jobs_list(sample_job_data) -> List[JobDetail]:
         jobs.append(JobDetail(**job_data))
     return jobs
 
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_asyncio():
+    """Clean up asyncio resources after test session."""
+    yield
+    # Suppress ResourceWarnings for unclosed aiohttp sessions from third-party libraries
+    warnings.filterwarnings("ignore", category=ResourceWarning, message=".*unclosed.*ClientSession.*")
+    warnings.filterwarnings("ignore", category=ResourceWarning, message=".*unclosed.*event loop.*")
 
 @pytest.fixture(scope="session")
 def event_loop():

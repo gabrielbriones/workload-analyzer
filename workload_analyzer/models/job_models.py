@@ -224,6 +224,9 @@ class JobDetail(JobRequest):
     instance_name: Optional[str] = None
     node_assignments: Optional[List[str]] = Field(default_factory=list)
 
+    # Tenant information
+    tenant_id: Optional[str] = Field(None, alias="TenantID")
+
     class Config:
         extra = "allow"
         json_encoders = {datetime: lambda dt: dt.isoformat()}

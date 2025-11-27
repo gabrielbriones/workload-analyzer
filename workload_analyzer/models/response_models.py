@@ -32,7 +32,6 @@ class HealthResponse(BaseModel):
     # Service status
     iss_api_status: str = "unknown"
     bedrock_status: str = "unknown"
-    file_service_status: str = "unknown"
 
     # Performance metrics
     response_time_ms: Optional[float] = None

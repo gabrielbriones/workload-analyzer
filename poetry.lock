@@ -255,7 +255,7 @@ websockets = ">=11.0.0"
 type = "git"
 url = "https://github.com/gabrielbriones/auto-bedrock-chat-fastapi.git"
 reference = "main"
-resolved_reference = "99a7b8ce7d50d279c6f1946cb1090b199c8d04e3"
+resolved_reference = "2c4bac0bb3fb3451484eb02cd9b162c4f9e6cb12"
 
 [[package]]
 name = "black"
