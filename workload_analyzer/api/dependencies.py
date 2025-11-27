@@ -7,7 +7,7 @@ from ..services.iss_client import ISSClient
 from ..services.file_service import FileService
 
 
-async def get_bearer_token(authorization: str = Header(...)) -> str:
+def get_bearer_token(authorization: str = Header(...)) -> str:
     """Extract and validate bearer token from Authorization header.
     
     Args:
