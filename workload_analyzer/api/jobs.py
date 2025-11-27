@@ -197,13 +197,15 @@ async def list_job_files(
     """List files for a specific job."""
     logger.info(f"📁 Listing files for job: {job_id}")
     try:
+        # Keep ISS client open for the entire operation to support connection pooling
+        # and avoid redundant connection setup if file_service needs to query ISS
         async with iss_client:
             job = await iss_client.get_job(job_id)
-        
-        async with file_service:
-            files = await file_service.list_files(
-                tenant=job.tenant_id, job_id=job_id, path=""
-            )
+            
+            async with file_service:
+                files = await file_service.list_files(
+                    tenant=job.tenant_id, job_id=job_id, path=""
+                )
 
         return FileListResponse(
             files=files,
@@ -238,24 +240,26 @@ async def download_job_file(
     """Download a file from a job."""
     logger.info(f"⬇️ Downloading file: {filename} from job: {job_id}")
     try:
+        # Keep ISS client open for the entire operation to support connection pooling
+        # and avoid redundant connection setup if file_service needs to query ISS
         async with iss_client:
             job = await iss_client.get_job(job_id)
-        
-        async with file_service:
-            # Generate download URL (redirect to file service)
-            response = await file_service.download_file(
-                tenant=job.tenant_id,
-                job_id=job_id,
-                file_path=filename,
-            )
-
-            if type(response) == bytes:
-                response = {"file_content": response.decode('utf-8')}
             
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content=response,
-            )
+            async with file_service:
+                # Generate download URL (redirect to file service)
+                response = await file_service.download_file(
+                    tenant=job.tenant_id,
+                    job_id=job_id,
+                    file_path=filename,
+                )
+
+                if type(response) == bytes:
+                    response = {"file_content": response.decode('utf-8')}
+                
+                return JSONResponse(
+                    status_code=status.HTTP_200_OK,
+                    content=response,
+                )
 
     except FileServiceError as e:
         logger.error(

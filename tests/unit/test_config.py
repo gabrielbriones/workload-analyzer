@@ -78,7 +78,40 @@ class TestSettings:
             assert settings.get_iss_url() == "https://custom-iss.company.com"
     
     def test_iss_url_default_pattern(self):
-        """Test ISS URL with prod environment uses production endpoint."""
+        """Test ISS URL with prod environment uses production endpoint when not explicitly set."""
+        env_vars = {
+            "ISS_ENVIRONMENT": "prod"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            
+            # Prod environment should use production endpoint when ISS_API_URL not explicitly set
+            assert settings.get_iss_url() == "https://api.simicsservice.intel.com"
+    
+    def test_iss_url_custom_override_detection(self):
+        """Test that custom ISS URLs are correctly detected and used."""
+        # Test 1: Custom URL with 'api-' pattern should be recognized as custom
+        env_vars = {
+            "ISS_API_URL": "https://api-custom.example.com",
+            "ISS_ENVIRONMENT": "test"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            assert settings.get_iss_url() == "https://api-custom.example.com"
+        
+        # Test 2: Custom URL with entirely different domain
+        env_vars = {
+            "ISS_API_URL": "https://internal-iss.mycompany.com",
+            "ISS_ENVIRONMENT": "prod"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            assert settings.get_iss_url() == "https://internal-iss.mycompany.com"
+        
+        # Test 3: Explicitly set to test environment URL should use that URL (user override)
         env_vars = {
             "ISS_API_URL": "https://api-test.workloadmgr.intel.com",
             "ISS_ENVIRONMENT": "prod"
@@ -86,9 +119,105 @@ class TestSettings:
         
         with patch.dict(os.environ, env_vars, clear=True):
             settings = Settings()
-            
-            # Prod environment should use production endpoint
+            # Explicit URL should override environment-based construction
+            assert settings.get_iss_url() == "https://api-test.workloadmgr.intel.com"
+        
+        # Test 4: Standard staging environment URL (not explicitly set)
+        env_vars = {
+            "ISS_ENVIRONMENT": "staging"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            assert settings.get_iss_url() == "https://api-staging.workloadmgr.intel.com"
+        
+        # Test 5: Production endpoint (not explicitly set)
+        env_vars = {
+            "ISS_ENVIRONMENT": "prod"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
             assert settings.get_iss_url() == "https://api.simicsservice.intel.com"
+    
+    def test_file_service_url_construction(self):
+        """Test file service URL construction with dynamic environment."""
+        # Test 1: Test environment
+        env_vars = {
+            "ISS_ENVIRONMENT": "test"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            url = settings.get_file_service_url("test-tenant")
+            assert url == "https://gw-test-tenant-test.workloadmgr.intel.com"
+        
+        # Test 2: Production environment
+        env_vars = {
+            "ISS_ENVIRONMENT": "prod"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            url = settings.get_file_service_url("prod-tenant")
+            assert url == "https://gw-prod-tenant.simicsservice.intel.com"
+        
+        # Test 3: Custom tenant URL from config
+        env_vars = {
+            "FILE_SERVICE_TENANT_URLS": '{"special-tenant": "https://special-gw.mycompany.com"}',
+            "ISS_ENVIRONMENT": "test"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            url = settings.get_file_service_url("special-tenant")
+            assert url == "https://special-gw.mycompany.com"
+            
+            # Other tenants should still use dynamic construction
+            url = settings.get_file_service_url("other-tenant")
+            assert url == "https://gw-other-tenant-test.workloadmgr.intel.com"
+    
+    def test_environment_case_insensitive(self):
+        """Test that ISS_ENVIRONMENT is handled case-insensitively."""
+        # Test uppercase PROD
+        env_vars = {
+            "ISS_ENVIRONMENT": "PROD"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            assert settings.get_iss_url() == "https://api.simicsservice.intel.com"
+            assert settings.get_file_service_url("tenant1") == "https://gw-tenant1.simicsservice.intel.com"
+        
+        # Test mixed case
+        env_vars = {
+            "ISS_ENVIRONMENT": "Prod"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            assert settings.get_iss_url() == "https://api.simicsservice.intel.com"
+            assert settings.get_file_service_url("tenant2") == "https://gw-tenant2.simicsservice.intel.com"
+        
+        # Test uppercase TEST environment
+        env_vars = {
+            "ISS_ENVIRONMENT": "TEST"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            assert settings.get_iss_url() == "https://api-test.workloadmgr.intel.com"
+            assert settings.get_file_service_url("tenant3") == "https://gw-tenant3-test.workloadmgr.intel.com"
+        
+        # Test mixed case STAGING
+        env_vars = {
+            "ISS_ENVIRONMENT": "Staging"
+        }
+        
+        with patch.dict(os.environ, env_vars, clear=True):
+            settings = Settings()
+            assert settings.get_iss_url() == "https://api-staging.workloadmgr.intel.com"
+            assert settings.get_file_service_url("tenant4") == "https://gw-tenant4-staging.workloadmgr.intel.com"
     
     def test_system_prompt_generation(self):
         """Test system prompt generation."""

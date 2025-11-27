@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # ISS API Configuration
     iss_api_url: str = Field(
-        default="https://api-test.workloadmgr.intel.com", env="ISS_API_URL"
+        default="", env="ISS_API_URL", description="Custom ISS API URL (if not set, will be constructed from ISS_ENVIRONMENT)"
     )
     iss_environment: str = Field(
         default="test", env="ISS_ENVIRONMENT", description="ISS environment (dev, test, prod) for URL construction"
@@ -284,15 +284,15 @@ class Settings(BaseSettings):
         Returns:
             File service base URL for the tenant
         """
-        # Check if there's a specific URL for this tenant
+        # Check if there's a specific URL for this tenant in the config
         if tenant in self.file_service_tenant_urls:
             return self.file_service_tenant_urls[tenant]
         
-        if self.iss_environment == 'prod':
+        # Otherwise dynamically construct the file service URL based on environment
+        if self.iss_environment.lower() == 'prod':
             return f"https://gw-{tenant}.simicsservice.intel.com"
         
-        # Otherwise dynamically construct the file service URL based on tenant
-        return f"https://gw-{tenant}-{self.iss_environment}.workloadmgr.intel.com"
+        return f"https://gw-{tenant}-{self.iss_environment.lower()}.workloadmgr.intel.com"
 
     def get_iss_url(self) -> str:
         """Get ISS API URL, either from override or dynamically constructed from environment.
@@ -300,16 +300,15 @@ class Settings(BaseSettings):
         Returns:
             ISS API base URL
         """
-        # If ISS_API_URL is explicitly set to a custom value, use it
-        # Check if it differs from the default pattern
-        if self.iss_api_url and not self.iss_api_url.startswith("https://api-"):
+        # If ISS_API_URL is explicitly set (not empty), use it as a custom override
+        if self.iss_api_url:
             return self.iss_api_url
         
-        if self.iss_environment == 'prod':
+        # Otherwise dynamically construct the ISS URL based on environment
+        if self.iss_environment.lower() == 'prod':
             return "https://api.simicsservice.intel.com"
         
-        # Otherwise dynamically construct the ISS URL based on environment
-        return f"https://api-{self.iss_environment}.workloadmgr.intel.com"
+        return f"https://api-{self.iss_environment.lower()}.workloadmgr.intel.com"
 
     def get_bedrock_system_prompt(self) -> str:
         """Get the effective system prompt for Bedrock AI."""
