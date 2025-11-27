@@ -27,7 +27,7 @@ async def get_bearer_token(authorization: str = Header(...)) -> str:
     return authorization[7:]  # Remove "Bearer " prefix
 
 
-async def get_iss_client(
+def get_iss_client(
     bearer_token: str = Depends(get_bearer_token),
     settings: Settings = Depends(get_settings)
 ) -> ISSClient:
