@@ -71,14 +71,6 @@ class FileService:
             await self._session.close()
             logger.debug("Closed file service session")
 
-    async def _get_access_token(self) -> str:
-        """Get bearer token for file service authentication.
-        
-        Returns:
-            Bearer token for authentication
-        """
-        return self.bearer_token
-
     def _get_auth_headers(self) -> dict:
         """Get authentication headers with bearer token.
         
