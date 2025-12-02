@@ -1,8 +1,10 @@
 """File service for accessing simulation artifacts."""
 
 import asyncio
+import io
 import logging
 import os
+import zipfile
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urljoin
@@ -108,13 +110,13 @@ class FileService:
         return urljoin(f"{base_url}/", path)
 
     async def _get_artifact_type_for_job(self, job_id: str) -> str:
-        """Get the artifact type (iwps, isim, coho) based on job type.
+        """Get the artifact type (iwps, isim, coho, workloadjob, workloadjobroi) based on job type.
 
         Args:
             job_id: Job identifier
 
         Returns:
-            Artifact type ('iwps', 'isim', 'coho')
+            Artifact type ('iwps', 'isim', 'coho', 'workloadjob', 'workloadjobroi')
         """
         try:
             if not self.iss_client:
@@ -139,6 +141,10 @@ class FileService:
                     return "coho"
                 elif job_type == "IWPS":
                     return "iwps"
+                elif job_type == "WorkloadJob":
+                    return "workloadjob"
+                elif job_type == "WorkloadJobROI":
+                    return "workloadjobroi"
                 else:
                     # Default to iwps for unknown types
                     logger.warning(f"Unknown job type '{job_type}', defaulting to 'iwps'")
@@ -224,6 +230,10 @@ class FileService:
             if path:
                 base_path = f"{base_path}/{path.strip('/')}"
 
+            if artifact_type in ["workloadjob", "workloadjobroi"]:
+                # For custom workload jobs
+                base_path =  f"fs/files/{job_id}/logs"
+
             async with await self._request(
                 "GET", tenant, base_path, {}
             ) as response:
@@ -231,7 +241,8 @@ class FileService:
                 logger.debug(f"File list data retrieved: {data}")
 
                 files = []
-                for file_data in data.get("files", []):
+                file_data_list = data.get("files", []) if artifact_type not in ["workloadjob", "workloadjobroi"] else data.get("children", [])
+                for file_data in file_data_list:
                     try:
                         # Handle both string filenames and object file data
                         if isinstance(file_data, str):
@@ -274,8 +285,55 @@ class FileService:
             # Build the correct file service path
             base_path = f"fs/files/{job_id}/{artifact_type}/artifacts/out/{file_path.strip('/')}"
 
+            if artifact_type in ["workloadjob", "workloadjobroi"]:
+                # For custom workload jobs
+                zip_file = None
+                if "simics" in file_path.strip('/'):
+                    zip_file = "simics"
+                if "serialconsole" in file_path.strip('/'):
+                    zip_file = "serialconsole"
+                if zip_file is None:
+                    raise Exception(f"Invalid file path {file_path} for workload job {job_id} logs")
+                base_path =  f"fs/files/{job_id}/logs/all/{zip_file}"
+
             async with await self._request("GET", tenant, base_path) as response:
                 content = await response.read()
+
+                if artifact_type in ["workloadjob", "workloadjobroi"]:
+                    logger.debug(f"Downloaded zip file for workload job {job_id}, size: {len(content)} bytes")
+                    
+                    # Extract specific file from zip
+                    try:
+                        with zipfile.ZipFile(io.BytesIO(content), 'r') as zip_ref:
+                            # List available files in zip for debugging
+                            available_files = zip_ref.namelist()
+                            logger.debug(f"Files in zip archive: {available_files}")
+                            
+                            # Search for the requested file in the zip
+                            # file_path might be something like "simics/console.log"
+                            target_file = None
+                            for zip_file_name in available_files:
+                                if file_path.strip('/') in zip_file_name or zip_file_name.endswith(file_path.strip('/')):
+                                    target_file = zip_file_name
+                                    break
+                            
+                            if target_file is None:
+                                # Try exact match
+                                if file_path.strip('/') in available_files:
+                                    target_file = file_path.strip('/')
+                            
+                            if target_file is None:
+                                raise FileNotFoundError(
+                                    f"File '{file_path}' not found in zip archive. Available files: {available_files}"
+                                )
+                            
+                            # Extract the specific file
+                            extracted_content = zip_ref.read(target_file)
+                            logger.info(f"Extracted file '{target_file}' from zip ({len(extracted_content)} bytes)")
+                            return extracted_content
+                    except zipfile.BadZipFile as e:
+                        logger.error(f"Failed to extract from zip file: {e}")
+                        raise FileServiceError(f"Invalid zip file format: {e}")
 
                 logger.info(f"Downloaded file {file_path} ({len(content)} bytes)")
                 return content
