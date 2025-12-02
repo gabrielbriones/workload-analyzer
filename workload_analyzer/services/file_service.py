@@ -290,7 +290,7 @@ class FileService:
                 zip_file = None
                 if "simics" in file_path.strip('/'):
                     zip_file = "simics"
-                if "serialconsole" in file_path.strip('/'):
+                elif "serialconsole" in file_path.strip('/'):
                     zip_file = "serialconsole"
                 if zip_file is None:
                     raise Exception(f"Invalid file path {file_path} for workload job {job_id} logs")
