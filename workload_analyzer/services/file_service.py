@@ -232,7 +232,7 @@ class FileService:
 
             if artifact_type in ["workloadjob", "workloadjobroi"]:
                 # For custom workload jobs
-                base_path =  f"fs/files/{job_id}/logs"
+                base_path = f"fs/files/{job_id}/logs"
 
             async with await self._request(
                 "GET", tenant, base_path, {}
