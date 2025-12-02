@@ -293,7 +293,7 @@ class FileService:
                 elif "serialconsole" in file_path.strip('/'):
                     zip_file = "serialconsole"
                 if zip_file is None:
-                    raise Exception(f"Invalid file path {file_path} for workload job {job_id} logs")
+                    raise FileServiceError(f"Invalid file path {file_path} for workload job {job_id} logs")
                 base_path = f"fs/files/{job_id}/logs/all/{zip_file}"
 
             async with await self._request("GET", tenant, base_path) as response:
