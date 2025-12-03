@@ -406,6 +406,10 @@ def setup_ai_integration(app: FastAPI, settings: Settings) -> None:
             supported_auth_types=[
                 "oauth2_client_credentials",
             ],
+            tool_result_new_response_threshold=settings.bedrock_tool_result_new_response_threshold,
+            tool_result_new_response_target=settings.bedrock_tool_result_new_response_target,
+            tool_result_history_threshold=settings.bedrock_tool_result_history_threshold,
+            tool_result_history_target=settings.bedrock_tool_result_history_target,
         )
 
         logger.info("Auto-bedrock-chat integration configured successfully")

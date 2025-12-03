@@ -93,6 +93,18 @@ class Settings(BaseSettings):
         default="Welcome! I'm your AI assistant. I can help you interact with the API endpoints. Try asking me to retrieve data, create resources, or explain what operations are available.",
         env="BEDROCK_UI_WELCOME_MESSAGE"
     )
+    bedrock_tool_result_new_response_threshold: int = Field(
+        default=750000, env="BEDROCK_TOOL_RESULT_NEW_RESPONSE_THRESHOLD"
+    )
+    bedrock_tool_result_new_response_target: int = Field(
+        default=637500, env="BEDROCK_TOOL_RESULT_NEW_RESPONSE_TARGET"
+    )
+    bedrock_tool_result_history_threshold: int = Field(
+        default=100000, env="BEDROCK_TOOL_RESULT_HISTORY_THRESHOLD"
+    )
+    bedrock_tool_result_history_target: int = Field(
+        default=85000, env="BEDROCK_TOOL_RESULT_HISTORY_TARGET"
+    )
 
     # Security Configuration
     jwt_secret_key: str = Field(
