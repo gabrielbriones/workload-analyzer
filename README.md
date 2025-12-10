@@ -366,14 +366,14 @@ AI: I'll analyze your workload characteristics and recommend optimal compiler se
 -mavx512f -mavx512dq -mavx512cd -mavx512bw -mavx512vl
 -mprefer-vector-width=512 -funroll-loops
 -ffast-math -fno-math-errno
-&#96;&#96;&#96;
+\```
 
 **Memory-Specific Optimizations:**
 ```bash
 -mllvm -enable-loopinterchange -mllvm -enable-loop-distribute
 -fprefetch-loop-arrays -mllvm -prefetch-distance=64
 -falign-loops=64 -falign-functions=64
-&#96;&#96;&#96;
+\```
 
 **Justification Based on Profile Analysis:**
 ✅ **AVX512 Enabled:** 67% of hotspot functions show vectorizable loops
