@@ -84,6 +84,11 @@ class Settings(BaseSettings):
         env="BEDROCK_MAX_CONVERSATION_MESSAGES",
         description="Maximum messages to keep in conversation history before trimming (reduced from default 100 to avoid orphaned tool_result blocks)"
     )
+    bedrock_api_base_url: Optional[str] = Field(
+        default=None,
+        env="BEDROCK_API_BASE_URL",
+        description="Base URL for API tool calls (e.g., http://localhost:8888). Auto-detected if not specified."
+    )
     bedrock_max_sessions: int = Field(default=1000, env="BEDROCK_MAX_SESSIONS")
     bedrock_session_timeout: int = Field(default=3600, env="BEDROCK_SESSION_TIMEOUT")
 
