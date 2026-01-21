@@ -17,30 +17,31 @@ The Workload Analyzer serves as an intelligent interface to Intel Simulation Ser
 
 ## 🏗️ Architecture
 
+```mermaid
+graph TB
+    User[User/Client<br/>AI Chat UI]
+    FastAPI[FastAPI Server<br/>API Wrapper & Chat Interface]
+    ISS_API[Intel ISS API<br/>Jobs & Artifacts]
+    ISS_Files[ISS File Service<br/>File Downloads]
+    Bedrock[AWS Bedrock<br/>AI Models]
+    
+    User -->|Bearer Token<br/>from ISS| FastAPI
+    FastAPI -->|Bearer Token| ISS_API
+    FastAPI -->|Bearer Token| ISS_Files
+    FastAPI -->|AWS Credentials<br/>AWS_ACCESS_KEY_ID<br/>AWS_SECRET_ACCESS_KEY| Bedrock
+    
+    style User fill:#e1f5ff
+    style FastAPI fill:#fff4e6
+    style ISS_API fill:#f3e5f5
+    style ISS_Files fill:#f3e5f5
+    style Bedrock fill:#e8f5e9
 ```
-┌─────────────────┐              ┌──────────────────┐
-│   User/Client   │─────────────▶│  FastAPI Server  │────────────────────────────────────┐
-│ (AI Chat UI)    │              │(API wrapper &    │                                    │
-└─────────────────┘              │ chat interface)  │                                    │
-                                 └──┬───────────┬───┘                                    │
-                                    │           │                                        │
-                             .simicsservice     │ Bearer Token                           │
-                             credentials        │                                        │
-                             (client_id,        └─────┬───────────────┐                  │
-                              client_secret,          │               │                  │
-                              auth_domain)        ┌───▼────────┐  ┌───▼────────────┐  ┌──▼──────────────┐
-                                    │             │ Intel ISS  │  │ ISS File       │  │  AWS Bedrock    │
-                                    │             │ API        │  │ Service        │  │  (AI Models)    │
-                                    │             │(Artifacts &│  │ (Artifacts &   │  │(Direct AWS Auth)│
-                                    │             │ Logs)      │  │ Logs)          │  │                 │
-                                    │             └────────────┘  └────────────────┘  └─────────────────┘
-                                    │
-                                    ▼
-                           ┌──────────────────┐
-                           │  AWS Cognito     │
-                           │  (Token Exchange)│
-                           └──────────────────┘
-```
+
+**Authentication Flow:**
+- **ISS Access**: User obtains pre-authenticated bearer token from ISS UI and passes it to the FastAPI server
+- **API Requests**: FastAPI uses the bearer token for all ISS API and File Service calls
+- **AI Analysis**: AWS Bedrock uses separate AWS credentials configured via environment variables
+- **No Token Exchange**: Direct bearer token pass-through, no Cognito or credential file parsing
 
 ## 📋 Features
 
